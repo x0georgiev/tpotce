@@ -49,7 +49,7 @@ T-Pot 24.04.1 brings significant updates and exciting new honeypot additions, es
 
 ## Thanks & Credits
 A heartfelt thank you to the contributors who made this release possible:
-* @elivlo, @mancasa, koalafiedTroll, @trixam, for their backend and ews support!
+* @elivlo, @mancasa, koalafiedTroll, @trixam, for their backend support!
 * @mariocandela for his work and updates on Beelzebub based on our discussions!
 * @ryanolee for approaching us and adding valuable features to go-pot based on our discussions! 
 * @neon-ninja for the work on #1661!

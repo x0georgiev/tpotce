@@ -11,16 +11,16 @@ RUN apk --no-cache -U upgrade && \
         git \
         g++
 #
-# Setup go, build medpot
+# Setup go, build medpot without its built-in data submission
+COPY dist/medpot.patch /root/medpot.patch
 RUN mkdir -p /usr/local/go/src/medpot && \
     git clone https://github.com/schmalle/medpot /usr/local/go/src/medpot && \
     cd /usr/local/go/src/medpot && \
     git checkout 75a2e6134cf926c35b6017d62542274434c87388 && \
+    git apply /root/medpot.patch && \
     go mod init github.com/schmalle/medpot && \
-    go mod edit -replace=github.com/go-ini/ini=gopkg.in/ini.v1@v1.67.3 && \
     go mod tidy && \
     go mod download && \
-    cp dist/etc/ews.cfg /etc/ && \
     go build -o medpot .
 #
 FROM scratch
@@ -28,8 +28,7 @@ FROM scratch
 # Setup medpot
 #
 COPY --from=builder /usr/local/go/src/medpot/medpot /opt/medpot/medpot
-COPY --from=builder /usr/local/go/src/medpot/template/*.xml /opt/medpot/template/
-COPY --from=builder /usr/local/go/src/medpot/dist/etc/ews.cfg /etc/ews.cfg
+COPY --from=builder /usr/local/go/src/medpot/template/dummy*.xml /opt/medpot/template/
 #
 # Start medpot
 WORKDIR /opt/medpot
