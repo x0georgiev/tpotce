@@ -1,0 +1,10 @@
+cluster.name: tpotcluster
+node.name: "tpotcluster-node-01"
+path:
+    logs: /data/opensearch/log
+    data: /data/opensearch/data
+http.host: 0.0.0.0
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+indices.query.bool.max_clause_count: 2000
+discovery.type: single-node

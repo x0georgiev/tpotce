@@ -2,24 +2,24 @@
 # attackmap_pipeline_test.sh — end-to-end test of the T-Pot Attack Map pipeline
 #
 #   synthetic honeypot JSON  ->  Logstash (file input, all filters: date, geoip,
-#   ip_rep, t-pot_hostname)  ->  Elasticsearch (logstash-*)  ->  DataServer
+#   ip_rep, t-pot_hostname)  ->  OpenSearch (logstash-*)  ->  DataServer
 #   (map_data, polls ES)  ->  Redis pubsub (map_redis)  ->  AttackMapServer
 #   (map_web)  ->  WebSocket (what the browser receives)
 #
 # Runs on the T-Pot host (docker access required; every check is executed
 # inside the existing containers, so the host needs only bash + docker).
 # Test events are appended to the real honeypot log files and become
-# ordinary events in Elasticsearch/Kibana afterwards (no cleanup by design).
+# ordinary events in OpenSearch/Dashboards afterwards (no cleanup by design).
 #
 # Usage: attackmap_pipeline_test.sh [--types cowrie,dionaea,honeytrap,rdphoneypot]
 #                                   [--ips A,B,C,D] [--timeout SECONDS] [--dry-run]
 #   --types     comma list of honeypot formats to inject (default: all four)
 #   --ips       test source IPs, one per type in --types order. Default: IPv4
-#               addresses that Elasticsearch ALREADY geolocated in the last 24 h
+#               addresses that OpenSearch ALREADY geolocated in the last 24 h
 #               (so they are known to resolve in this host's GeoLite2 City DB),
 #               padded from a built-in fallback list. Anycast resolvers such as
 #               1.1.1.1 or 9.9.9.9 have NO city entry -> _geoip_lookup_failure
-#               -> DataServer skips the event; the ES stage reports that.
+#               -> DataServer skips the event; the OpenSearch stage reports that.
 #   --timeout   seconds to wait per stage (default: 90)
 #   --dry-run   print the events and commands only, touch nothing
 
@@ -101,7 +101,7 @@ function fuPARSEARGS {
 function fuCHECKDEPS {
   [ "$myDRYRUN" = 1 ] && return
   command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found."; exit 1; }
-  for c in logstash elasticsearch map_redis map_data map_web; do
+  for c in logstash opensearch map_redis map_data map_web; do
     if [ "$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null)" != "true" ]; then
       echo "ERROR: container '$c' is not running."; exit 1
     fi
@@ -126,9 +126,9 @@ function fuPICKIPS {
   if [ -n "$myIPS" ]; then
     picked="${myIPS//,/ }"
   elif [ "$myDRYRUN" = 0 ]; then
-    # IPv4 sources Elasticsearch geolocated within the last 24 h: guaranteed
+    # IPv4 sources OpenSearch geolocated within the last 24 h: guaranteed
     # to resolve in this host's GeoLite2 City database
-    picked=$(docker exec elasticsearch curl -s -H 'Content-Type: application/json' \
+    picked=$(docker exec opensearch curl -s -H 'Content-Type: application/json' \
       "localhost:9200/logstash-*/_search" \
       -d '{"size":0,"query":{"bool":{"filter":[{"exists":{"field":"geoip.latitude"}},{"range":{"@timestamp":{"gte":"now-24h"}}}]}},"aggs":{"ips":{"terms":{"field":"src_ip.keyword","size":40}}}}' \
       | grep -o '"key":"[0-9.]*"' | cut -d'"' -f4 | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | head -8 | tr '\n' ' ')
@@ -145,9 +145,9 @@ function fuPICKIPS {
   if [ -n "$myIPS" ]; then
     echo "    (given via --ips)"
   elif [ -n "$picked" ]; then
-    echo "    (taken from sources Elasticsearch geolocated in the last 24 h)"
+    echo "    (taken from sources OpenSearch geolocated in the last 24 h)"
   else
-    echo "    (no geolocated events in Elasticsearch yet — fresh installation? — using the built-in fallback list)"
+    echo "    (no geolocated events in OpenSearch yet — fresh installation? — using the built-in fallback list)"
   fi
 }
 
@@ -212,14 +212,14 @@ function fuESQUERY { # type -> ES query body: exactly OUR event (ip + src_port +
 }
 
 function fuWAITES {
-  echo "[*] waiting for Elasticsearch (logstash-*) ..."
+  echo "[*] waiting for OpenSearch (logstash-*) ..."
   local deadline=$(( $(date +%s) + myTIMEOUT ))
   while :; do
     local pending=0
     for t in $myINJECTEDTYPES; do
       [ -n "$(fuGETRES ES "$t")" ] && continue
       local res
-      res=$(docker exec elasticsearch curl -s -H 'Content-Type: application/json' \
+      res=$(docker exec opensearch curl -s -H 'Content-Type: application/json' \
             "localhost:9200/logstash-*/_search" -d "$(fuESQUERY "$t")")
       local total
       total=$(printf '%s' "$res" | grep -o '"total":{"value":[0-9]*' | head -1 | grep -o '[0-9]*$')
@@ -288,7 +288,7 @@ function fuWAITMAP {
 
 function fuREPORT {
   echo
-  printf '%-14s %-16s %-10s %-26s %-16s %-16s\n' "type" "src_ip" "injected" "elasticsearch" "redis pubsub" "websocket"
+  printf '%-14s %-16s %-10s %-26s %-16s %-16s\n' "type" "src_ip" "injected" "opensearch" "redis pubsub" "websocket"
   local rc=0
   for t in ${myTYPES//,/ }; do
     case " $myINJECTEDTYPES " in
@@ -304,7 +304,7 @@ function fuREPORT {
   echo
   [ "$rc" = 0 ] && echo "RESULT: PASS — the full pipeline delivered every injected event to the Attack Map." \
                 || echo "RESULT: FAIL — see the stages above (listener logs kept in $myTMP)."
-  echo "Note: the test events remain in Elasticsearch/Kibana as ordinary events (src_ip$(for t in ${myTYPES//,/ }; do printf ' %s' "$(fuTESTIP "$t")"; done), src_port 51234-51237)."
+  echo "Note: the test events remain in OpenSearch/Dashboards as ordinary events (src_ip$(for t in ${myTYPES//,/ }; do printf ' %s' "$(fuTESTIP "$t")"; done), src_port 51234-51237)."
   return $rc
 }
 

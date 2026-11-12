@@ -370,24 +370,69 @@ figlet "T-Pot: ${TPOT_VERSION}"
 echo
 touch /tmp/success
 
-# We need to push objects to Kibana if this is a Hive and a fresh install
-if [ "${myFIRSTRUN}" == "true" ] && [ "${TPOT_TYPE}" == "HIVE" ];
+# Import the T-Pot saved objects (index pattern, visualizations, dashboards) into
+# OpenSearch Dashboards on a HIVE. This happens on a fresh install and whenever the
+# T-Pot index pattern is missing (e.g. after the Dashboards index was removed).
+# Objects changed by the user are left alone otherwise. Runs in the background so it does not hold up autoheal.
+if [ "${TPOT_TYPE}" == "HIVE" ] && grep -qE "^  opensearch-dashboards:" "${COMPOSE}" 2>/dev/null;
   then
-    myKIBANA_URL="http://127.0.0.1:64296"
-    myKIBANA_CONFIG="/opt/tpot/etc/objects/export.ndjson"
+    (
+      myDASHBOARDS_URL="http://127.0.0.1:64296/dashboards"
+      myDASHBOARDS_OBJECTS="/opt/tpot/etc/objects/osd_export.ndjson"
 
-    # Wait for Kibana to be available
-    until curl -s -f -o /dev/null "{$myKIBANA_URL}/api/status"; do
-      echo "# Waiting for Kibana to upload config..."
-      sleep 2
-    done
+      # Wait for OpenSearch Dashboards to be available
+      until curl -s -f -o /dev/null "${myDASHBOARDS_URL}/api/status"; do
+        echo "# Waiting for OpenSearch Dashboards to upload T-Pot objects ..."
+        sleep 5
+      done
 
-    # Upload Kibana config
-    echo "# Now uploading config to Kibana."
-    curl -X POST "http://127.0.0.1:64296/api/saved_objects/_import?overwrite=true" \
-      -H "kbn-xsrf: true" \
-      --form file=@/opt/tpot/etc/objects/kibana_export.ndjson
-    echo "# Kibana config has been uploaded."
+      myPATTERN=$(curl -s -o /dev/null -w "%{http_code}" "${myDASHBOARDS_URL}/api/saved_objects/index-pattern/logstash-*")
+      if [ "${myFIRSTRUN}" == "true" ] || [ "${myPATTERN}" == "404" ];
+        then
+          echo "# Now uploading T-Pot objects to OpenSearch Dashboards."
+          curl -s -X POST "${myDASHBOARDS_URL}/api/saved_objects/_import?overwrite=true" \
+            -H "osd-xsrf: true" \
+            --form file=@"${myDASHBOARDS_OBJECTS}" | grep -o '"successCount":[0-9]*,"success":[a-z]*'
+          # UI defaults
+          curl -s -o /dev/null -X POST "${myDASHBOARDS_URL}/api/opensearch-dashboards/settings" \\
+            -H "osd-xsrf: true" -H "Content-Type: application/json" \\
+            -d '{"changes":{"defaultIndex":"logstash-*","theme:darkMode":true,"dateFormat:dow":"Monday","state:storeInSessionStorage":true,"defaultRoute":"/app/dashboards#/view/8d4e8300-ebde-11e8-9675-1b303bfb38ef"}}'
+          echo "# T-Pot objects have been uploaded to OpenSearch Dashboards."
+        else
+          echo "# T-Pot objects are already present in OpenSearch Dashboards."
+      fi
+
+      # OpenSearch Dashboards caches the field list in the index pattern and does not
+      # pick up new fields by itself. New honeypot types bring new fields,
+      # so merge the live field list into the T-Pot index pattern every 10 minutes.
+      # Fields shipped with the T-Pot objects are kept even before they hold data,
+      # otherwise their visualizations fail with "Could not locate that index-pattern-field".
+      myFIELDS_URL="${myDASHBOARDS_URL}/api/index_patterns/_fields_for_wildcard?pattern=logstash-*&meta_fields=_source&meta_fields=_id&meta_fields=_type&meta_fields=_index&meta_fields=_score"
+      myPATTERN_URL="${myDASHBOARDS_URL}/api/saved_objects/index-pattern/logstash-*"
+      while true;
+        do
+          if curl -s -f "${myFIELDS_URL}" -o /tmp/osd_live_fields.json && \
+             curl -s -f "${myPATTERN_URL}" -o /tmp/osd_pattern.json;
+            then
+              jq -r '.attributes.fields // "[]"' /tmp/osd_pattern.json > /tmp/osd_cur_fields.json
+              jq -n --slurpfile live /tmp/osd_live_fields.json --slurpfile cur /tmp/osd_cur_fields.json '
+                (($cur[0] // []) | map({(.name): .}) | add // {}) as $c
+                | (($live[0].fields // []) | map({(.name): .}) | add // {}) as $l
+                | ($c * $l) | [.[]] | sort_by(.name)' > /tmp/osd_new_fields.json
+              if [ "$(jq -c '[.[] | .name + ":" + .type] | sort' /tmp/osd_new_fields.json)" != \
+                   "$(jq -c '[.[] | .name + ":" + .type] | sort' /tmp/osd_cur_fields.json)" ];
+                then
+                  jq -n --slurpfile f /tmp/osd_new_fields.json '{attributes: {fields: ($f[0] | tojson)}}' > /tmp/osd_update.json
+                  if curl -s -f -o /dev/null -X PUT "${myPATTERN_URL}" -H "osd-xsrf: true" \
+                       -H "Content-Type: application/json" --data-binary @/tmp/osd_update.json;
+                    then
+                      echo "# Refreshed the T-Pot index pattern fields ($(jq length /tmp/osd_new_fields.json) fields)."
+                  fi
+              fi
+          fi
+          sleep 600
+      done
+    ) &
 fi
 
 # We want to see true source for UDP packets in container (https://github.com/moby/libnetwork/issues/1994)

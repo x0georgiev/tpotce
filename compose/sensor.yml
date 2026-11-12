@@ -681,7 +681,7 @@ services:
 #### Tools 
 ##################
 
-#### ELK
+#### OpenSearch stack
 
 ## Logstash service
   logstash:
@@ -704,7 +704,7 @@ services:
     volumes:
      - ${TPOT_DATA_PATH}:/data
 
-#### /ELK
+#### /OpenSearch stack
 
 # Ewsposter service
   ewsposter:

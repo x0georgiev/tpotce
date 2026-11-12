@@ -12,7 +12,7 @@ Before you post your issue make sure it has not been answered yet and provide **
 
 - 🔍 Use the [search function](https://github.com/telekom-security/tpotce/issues?utf8=%E2%9C%93&q=) first
 - 🧐 Check our [Config Examples & Tutorials](https://github.com/telekom-security/tpotce/discussions/categories/config-examples-tutorials) and the [discussions](https://github.com/telekom-security/tpotce/discussions) in general.
-- 📚 Consult the documentation of 💻 your Linux OS, 🐳 [Docker](https://docs.docker.com/), the 🦌 [Elastic stack](https://www.elastic.co/guide/index.html) and the 🍯 [T-Pot Readme](https://github.com/telekom-security/tpotce/blob/master/README.md).
+- 📚 Consult the documentation of 💻 your Linux OS, 🐳 [Docker](https://docs.docker.com/), the 🦌 [OpenSearch](https://opensearch.org/docs/latest/) and the 🍯 [T-Pot Readme](https://github.com/telekom-security/tpotce/blob/master/README.md).
 - ⚙️ The [Troubleshoot Section](https://github.com/telekom-security/tpotce?tab=readme-ov-file#troubleshooting) of the [T-Pot Readme](https://github.com/telekom-security/tpotce/blob/master/README.md) is a good starting point to collect a good set of information for the issue and / or to fix things on your own.
 - **⚠️ Provide [BASIC SUPPORT INFORMATION](#-basic-support-information-commands-are-expected-to-run-as-root) or similar detailed information with regard to your issue or we will close the issue or convert it into a discussion without further interaction from the maintainers**.<br>
 

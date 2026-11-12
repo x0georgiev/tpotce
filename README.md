@@ -2,7 +2,7 @@
 
 ![T-Pot](doc/tpotsocial.png)
 
-T-Pot is the all in one, optionally distributed, multiarch (amd64, arm64) honeypot plattform, supporting 20+ honeypots and countless visualization options using the Elastic Stack, animated live attack maps and lots of security tools to further improve the deception experience.
+T-Pot is the all in one, optionally distributed, multiarch (amd64, arm64) honeypot plattform, supporting 20+ honeypots and countless visualization options using OpenSearch and OpenSearch Dashboards, animated live attack maps and lots of security tools to further improve the deception experience.
 <br><br>
 
 # TL;DR
@@ -57,10 +57,9 @@ env bash -c "$(curl -sL https://github.com/telekom-security/tpotce/raw/master/in
 - [Remote Access and Tools](#remote-access-and-tools)
   - [SSH](#ssh)
   - [T-Pot Landing Page](#t-pot-landing-page)
-  - [Kibana Dashboard](#kibana-dashboard)
+  - [OpenSearch Dashboards](#opensearch-dashboards)
   - [Attack Map](#attack-map)
   - [Cyberchef](#cyberchef)
-  - [Elasticvue](#elasticvue)
   - [Spiderfoot](#spiderfoot)
 - [Configuration](#configuration)
   - [T-Pot Config File](#t-pot-config-file)
@@ -83,7 +82,7 @@ env bash -c "$(curl -sL https://github.com/telekom-security/tpotce/raw/master/in
   - [Show Containers and Images](#show-containers-and-images)
   - [Blackhole](#blackhole)
   - [Add Users to Nginx (T-Pot WebUI)](#add-users-to-nginx-t-pot-webui)
-  - [Import and Export Kibana Objects](#import-and-export-kibana-objects)
+  - [Import and Export Dashboards Objects](#import-and-export-dashboards-objects)
     - [Export](#export)
     - [Import](#import)
 - [Troubleshooting](#troubleshooting)
@@ -151,8 +150,7 @@ T-Pot's main components have been moved into the `tpotinit` Docker image allowin
 Alongside the following tools:
 * [Autoheal](https://github.com/willfarrell/docker-autoheal) a tool to automatically restart containers with failed healthchecks.
 * [Cyberchef](https://gchq.github.io/CyberChef/) a web app for encryption, encoding, compression and data analysis.
-* [Elastic Stack](https://www.elastic.co/videos) to beautifully visualize all the events captured by T-Pot.
-* [Elasticvue](https://github.com/cars10/elasticvue/) a web front end for browsing and interacting with an Elasticsearch cluster.
+* [OpenSearch](https://opensearch.org/) and [OpenSearch Dashboards](https://opensearch.org/docs/latest/dashboards/) to beautifully visualize all the events captured by T-Pot.
 * [Fatt](https://github.com/0x4D31/fatt) a pyshark based script for extracting network metadata and fingerprints from pcap files and live network traffic.
 * [T-Pot-Attack-Map](https://github.com/telekom-security/t-pot-attack-map) a beautifully animated attack map for T-Pot.
 * [P0f](https://lcamtuf.coredump.cx/p0f3/) is a tool for purely passive traffic fingerprinting.
@@ -175,14 +173,13 @@ The individual Dockerfiles and configurations are located in the [docker folder]
 T-Pot offers a number of services which are basically divided into five groups:
 1. System services provided by the OS
     * SSH for secure remote access.
-2. Elastic Stack
-    * Elasticsearch for storing events.
-    * Logstash for ingesting, receiving and sending events to Elasticsearch.
-    * Kibana for displaying events on beautifully rendered dashboards.
+2. OpenSearch Stack
+    * OpenSearch for storing events.
+    * Logstash (with the `logstash-output-opensearch` plugin) for ingesting, receiving and sending events to OpenSearch.
+    * OpenSearch Dashboards for displaying events on beautifully rendered dashboards.
 3. Tools
-    * NGINX provides secure remote access (reverse proxy) to Kibana, CyberChef, Elasticvue, GeoIP AttackMap, Spiderfoot and allows for T-Pot sensors to securely transmit event data to the T-Pot hive.
+    * NGINX provides secure remote access (reverse proxy) to OpenSearch Dashboards, CyberChef, GeoIP AttackMap, Spiderfoot and allows for T-Pot sensors to securely transmit event data to the T-Pot hive.
     * CyberChef a web app for encryption, encoding, compression and data analysis.
-    * Elasticvue a web front end for browsing and interacting with an Elasticsearch cluster.
     * T-Pot Attack Map a beautifully animated attack map for T-Pot.
     * Spiderfoot an open source intelligence automation tool.
 4. Honeypots
@@ -201,7 +198,6 @@ During the installation and during the usage of T-Pot there are two different ty
 | SSH              | OS           | `<OS_USERNAME>`  | The user you chose during the installation of the OS.              |
 | Nginx            | BasicAuth    | `<WEB_USER>`     | `<web_user>` you chose during the installation of T-Pot.           |
 | CyberChef        | BasicAuth    | `<WEB_USER>`     | `<web_user>` you chose during the installation of T-Pot.           |
-| Elasticvue       | BasicAuth    | `<WEB_USER>`     | `<web_user>` you chose during the installation of T-Pot.           |
 | Geoip Attack Map | BasicAuth    | `<WEB_USER>`     | `<web_user>` you chose during the installation of T-Pot.           |
 | Spiderfoot       | BasicAuth    | `<WEB_USER>`     | `<web_user>` you chose during the installation of T-Pot.           |
 | T-Pot            | OS           | `tpot`           | `tpot` this user / group is always reserved by the T-Pot services. |
@@ -496,7 +492,7 @@ You can also login from your browser and access the T-Pot WebUI and tools: `http
 <br><br>
 
 ## Standalone First Start
-There is not much to do except to login and check via `dps` if all services and honeypots are starting up correctly. You can use `dim` to review the installed Docker images including their `CREATED` age, then login to Kibana and / or Geoip Attack Map to monitor the attacks.
+There is not much to do except to login and check via `dps` if all services and honeypots are starting up correctly. You can use `dim` to review the installed Docker images including their `CREATED` age, then login to OpenSearch Dashboards and / or Geoip Attack Map to monitor the attacks.
 <br><br>
 
 ## Distributed Deployment
@@ -629,10 +625,9 @@ According to the [User Types](#user-types) you can open the T-Pot Landing Page f
 ![T-Pot-WebUI](doc/tpotwebui.png)
 <br><br>
 
-## Kibana Dashboard
-On the T-Pot Landing Page just click on `Kibana` and you will be forwarded to Kibana. You can select from a large variety of dashboards and visualizations all tailored to the T-Pot supported honeypots.
+## OpenSearch Dashboards
+On the T-Pot Landing Page just click on `Dashboards` and you will be forwarded to OpenSearch Dashboards (`https://<host>:64297/dashboards/`). On the T-Pot host itself it is also reachable directly at `http://127.0.0.1:64296/dashboards/`, i.e. through an SSH tunnel. Use `Dev Tools` for direct queries against OpenSearch and `Index Management` to inspect indices and the retention policy. You can select from a large variety of dashboards and visualizations all tailored to the T-Pot supported honeypots.
 
-![Dashbaord](doc/kibana_a.png)
 <br><br>
 
 ## Attack Map
@@ -645,12 +640,6 @@ On the T-Pot Landing Page just click on `Attack Map` and you will be forwarded t
 On the T-Pot Landing Page just click on `Cyberchef` and you will be forwarded to Cyberchef.
 
 ![Cyberchef](doc/cyberchef.png)
-<br><br>
-
-## Elasticvue
-On the T-Pot Landing Page just click on `Elasticvue` and you will be forwarded to Elasticvue.
-
-![Elasticvue](doc/elasticvue.png)
 <br><br>
 
 ## Spiderfoot
@@ -738,9 +727,9 @@ compressed - on a Raspberry Pi compression would cost time for nothing. Add `--f
 `~/tpotce/data` in there as well; be aware that on a busy hive this turns a megabyte into tens of
 gigabytes.
 
-Your own Kibana objects and the ILM policy live in Elasticsearch rather than in a file, so they are
-exported into the same archive **before** T-Pot is stopped. You no longer need to export them by
-hand ahead of an update.
+Your own OpenSearch Dashboards objects and the ISM policy live in OpenSearch rather than in a file,
+so they are exported into the same archive **before** T-Pot is stopped. You no longer need to export
+them by hand ahead of an update.
 
 Backups rotate: the last ten regular and the last two `--full` archives are kept, counted
 separately, and the newest is never removed. Before writing, the script checks that the archive
@@ -788,10 +777,10 @@ restore.sh -f <archive> -y        # restore everything from this archive, no que
 
 Without `-y` every group is offered separately, so you can bring back just the configuration
 without touching anything else. The groups are the rollback of the git checkout, your changes to
-tracked files, the configuration, your untracked files, the files under `data/`, and the Kibana
-objects with the ILM policy.
+tracked files, the configuration, your untracked files, the files under `data/`, and the
+OpenSearch Dashboards objects with the ISM policy.
 
-T-Pot is stopped for the file part and started again for the Kibana import, because that one needs
+T-Pot is stopped for the file part and started again for the OpenSearch import, because that one needs
 a running instance. The files under `data/` are restored with the owner and mode from the archive
 (`tpot:tpot`, uid/gid 2000) - without those the containers will not start.
 
@@ -859,22 +848,19 @@ If you want to manually stop the T-Pot service you can do so via `systemctl stop
 <br><br>
 
 ## T-Pot Data Folder
-All persistent log files from the honeypots, tools and T-Pot related services are stored in `~/tpotce/data`. This includes collected artifacts which are not transmitted to the Elastic Stack.
+All persistent log files from the honeypots, tools and T-Pot related services are stored in `~/tpotce/data`. This includes collected artifacts which are not transmitted to OpenSearch.
 <br><br>
 
 ## Log Persistence
 All log data is stored in the [T-Pot Data Folder](#t-pot-data-folder) and will be persisted for the number of cycles set for `TPOT_PERSISTENCE_CYCLES=<1-999>` in the T-Pot configuration file `~/tpotce/.env`. It defaults to 30.
 <br>
-Elasticsearch indices are handled by the `tpot` Index Lifecycle Policy which can be adjusted directly in Kibana (make sure to "Include managed system policies").
-![IndexManagement1](doc/kibana_b.png)
-<br><br>
-
-By default the `tpot` Index Lifecycle Policy keeps the indices for 30 days. This offers a good balance between storage and speed. However you may adjust the policy to your needs.
-![IndexManagement2](doc/kibana_c.png)
+OpenSearch indices are handled by the `tpot` Index State Management (ISM) policy (`docker/logstash/dist/tpot-ism-policy.json`), which Logstash creates on start if it does not exist yet. By default it deletes indices after 30 days. This offers a good balance between storage and speed. However you may adjust the policy to your needs.
+<br>
+The policy can be viewed and edited in OpenSearch Dashboards under `Index Management` > `Policies`, or via the API (`GET` / `PUT _plugins/_ism/policies/tpot`; an update requires `?if_seq_no=<seq_no>&if_primary_term=<primary_term>` from the `GET` response).
 <br><br>
 
 ## Factory Reset
-All log data stored in the [T-Pot Data Folder](#t-pot-data-folder) (except for Elasticsearch indices, of course) can be erased by running `clean.sh`.
+All log data stored in the [T-Pot Data Folder](#t-pot-data-folder) (except for OpenSearch indices, of course) can be erased by running `clean.sh`.
 Sometimes things might break beyond repair and it has never been easier to reset a T-Pot to factory defaults (make sure to enter `cd ~/tpotce`).
 1. Stop T-Pot using `systemctl stop tpot`.
 2. Move / Backup the `~/tpotce/data` folder to a safe place (this is optional, just in case).
@@ -906,25 +892,25 @@ To **remove** users open `~/tpotce/.env`, locate `WEB_USER` and remove the corre
 For the changes to take effect you need to restart T-Pot using `systemctl stop tpot` and `systemctl start tpot` or `sudo reboot`.
 <br><br>
 
-## Import and Export Kibana Objects
-Some T-Pot updates will require you to update the Kibana objects. Either to support new honeypots or to improve existing dashboards or visualizations. Make sure to ***export*** first so you do not loose any of your adjustments.
+## Import and Export Dashboards Objects
+T-Pot's dashboards and visualizations are imported by `tpotinit` on first start and whenever the `logstash-*` index pattern is missing. Some T-Pot updates will require you to update the OpenSearch Dashboards objects. Either to support new honeypots or to improve existing dashboards or visualizations. Make sure to ***export*** first so you do not loose any of your adjustments.
 
 ### Export
-1. Go to Kibana
-2. Click on "Stack Management"
-3. Click on "Saved Objects"
+1. Go to OpenSearch Dashboards
+2. Click on "Dashboards Management"
+3. Click on "Saved objects"
 4. Click on "Export <no.> objects"
-5. Click on "Export all"
 This will export a NDJSON file with all your objects. Always run a full export to make sure all references are included.
 
 ### Import
-1. [Download the NDJSON file](https://raw.githubusercontent.com/telekom-security/tpotce/refs/heads/master/docker/tpotinit/dist/etc/objects/kibana_export.ndjson.zip) and unzip it.
-2. Go to Kibana
-3. Click on "Stack Management"
-4. Click on "Saved Objects"
-5. Click on "Import" and leave the defaults (check for existing objects and automatically overwrite conflicts) if you did not make personal changes to the Kibana objects.
+1. [Download the NDJSON file](https://raw.githubusercontent.com/telekom-security/tpotce/refs/heads/master/docker/tpotinit/dist/etc/objects/osd_export.ndjson.zip) and unzip it.
+2. Go to OpenSearch Dashboards
+3. Click on "Dashboards Management"
+4. Click on "Saved objects"
+5. Click on "Import" and leave the defaults (check for existing objects and automatically overwrite conflicts) if you did not make personal changes to the Dashboards objects.
 6. Browse for NDJSON file
-When asked: "If any of the objects already exist, do you want to automatically overwrite them?" you answer with "Yes, overwrite all".
+When asked: "If any of the objects already exist, do you want to automatically overwrite them?" you answer with "Yes, overwrite all".<br>
+When importing via the API (`http://127.0.0.1:64296/dashboards/api/saved_objects/_import`) the header `osd-xsrf: true` is required.
 <br><br>
 
 # Troubleshooting
@@ -949,8 +935,8 @@ docker-compose -f ~/tpotce/docker-compose.yml down -v
 <br><br>
 
 ## RAM and Storage
-The Elastic Stack is hungry for RAM, specifically `logstash` and `elasticsearch`. If the Elastic Stack is unavailable, does not receive any logs or simply keeps crashing it is most likely a RAM or storage issue.<br>
-While T-Pot keeps trying to restart the services / containers run `docker logs -f <container_name>` (either `logstash` or `elasticsearch`) and check if there are any warnings or failures involving RAM.
+The OpenSearch stack is hungry for RAM, specifically `logstash` and `opensearch`. If OpenSearch is unavailable, does not receive any logs or simply keeps crashing it is most likely a RAM or storage issue.<br>
+While T-Pot keeps trying to restart the services / containers run `docker logs -f <container_name>` (either `logstash` or `opensearch`) and check if there are any warnings or failures involving RAM.
 
 Storage failures can be identified easier via `htop`. 
 <br><br>
@@ -998,18 +984,17 @@ The software that T-Pot is built on uses the following licenses.
 <br>Apache 2 License:
 [cyberchef](https://github.com/gchq/CyberChef/blob/master/LICENSE),
 [dicompot](https://github.com/nsmfoo/dicompot/blob/master/LICENSE),
-[elasticsearch](https://github.com/elastic/elasticsearch/blob/master/LICENSE.txt),
+[opensearch](https://github.com/opensearch-project/OpenSearch/blob/main/LICENSE.txt),
+[opensearch-dashboards](https://github.com/opensearch-project/OpenSearch-Dashboards/blob/main/LICENSE.txt),
 [go-pot](https://github.com/ryanolee/go-pot?tab=License-1-ov-file#readme),
 [h0neytr4p](https://github.com/pbssubhash/h0neytr4p?tab=Apache-2.0-1-ov-file#readme),
 [logstash](https://github.com/elastic/logstash/blob/main/LICENSE.txt),
-[kibana](https://github.com/elastic/kibana/blob/main/LICENSE.txt),
 [docker](https://github.com/moby/moby/blob/master/LICENSE)
 <br>MIT license:
 [autoheal](https://github.com/willfarrell/docker-autoheal?tab=MIT-1-ov-file#readme),
 [beelzebub](https://github.com/beelzebub-labs/beelzebub?tab=MIT-1-ov-file#readme),
 [ciscoasa](https://github.com/Cymmetria/ciscoasa_honeypot/blob/master/LICENSE),
 [ddospot](https://github.com/aelth/ddospot/blob/master/LICENSE),
-[elasticvue](https://github.com/cars10/elasticvue/blob/master/LICENSE),
 [glutton](https://github.com/mushorg/glutton/blob/main/LICENSE),
 [hellpot](https://github.com/yunginnanet/HellPot/blob/main/LICENSE),
 [honeyaml](https://github.com/mmta/honeyaml?tab=MIT-1-ov-file#readme),
@@ -1045,8 +1030,6 @@ Without open source and the development community we are proud to be a part of, 
 [dionaea](https://github.com/DinoTools/dionaea/graphs/contributors),
 [docker](https://github.com/moby/moby/graphs/contributors),
 [elasticpot](https://gitlab.com/bontchev/elasticpot/-/project_members),
-[elasticsearch](https://github.com/elastic/elasticsearch/graphs/contributors),
-[elasticvue](https://github.com/cars10/elasticvue/graphs/contributors),
 [endlessh](https://github.com/skeeto/endlessh/graphs/contributors),
 [ewsposter](https://github.com/armedpot/ewsposter/graphs/contributors),
 [fatt](https://github.com/0x4D31/fatt/graphs/contributors),
@@ -1060,8 +1043,9 @@ Without open source and the development community we are proud to be a part of, 
 [honeypots](https://github.com/qeeqbox/honeypots/graphs/contributors),
 [honeytrap](https://github.com/armedpot/honeytrap/graphs/contributors),
 [ipphoney](https://gitlab.com/bontchev/ipphoney/-/project_members),
-[kibana](https://github.com/elastic/kibana/graphs/contributors),
 [logstash](https://github.com/elastic/logstash/graphs/contributors),
+[opensearch](https://github.com/opensearch-project/OpenSearch/graphs/contributors),
+[opensearch-dashboards](https://github.com/opensearch-project/OpenSearch-Dashboards/graphs/contributors),
 [log4pot](https://github.com/thomaspatzke/Log4Pot/graphs/contributors),
 [mailoney](https://github.com/phin3has/mailoney),
 [maltrail](https://github.com/stamparm/maltrail/graphs/contributors),

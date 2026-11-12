@@ -5,14 +5,9 @@ FROM alpine:${ALPINE_VERSION} AS assets
 # Include dist and prepare final assets
 COPY dist/ /work/dist/
 RUN mkdir -p /out/var/lib/nginx/html /out/etc/nginx/conf.d && \
-    cd /work/dist/html/esvue && \
-    sha256sum -c esvue.tgz.sha256 && \
     cd /work/dist/html/cyberchef && \
     sha256sum -c cyberchef.tgz.sha256 && \
     cp -R /work/dist/html/* /out/var/lib/nginx/html/ && \
-    cd /out/var/lib/nginx/html/esvue && \
-    tar xvfz esvue.tgz && \
-    rm -f esvue.tgz && \
     cd /out/var/lib/nginx/html/cyberchef && \
     tar xvfz cyberchef.tgz && \
     rm -f cyberchef.tgz && \

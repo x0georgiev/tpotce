@@ -608,18 +608,17 @@ services:
 #### Tools
 ##################
 
-#### ELK
-## Elasticsearch service
-  elasticsearch:
-    container_name: elasticsearch
+#### OpenSearch stack
+## OpenSearch service
+  opensearch:
+    container_name: opensearch
     restart: always
     depends_on:
       tpotinit:
         condition: service_healthy
     environment:
      - bootstrap.memory_lock=true
-     - ES_JAVA_OPTS=-Xms2048m -Xmx2048m
-     - ES_TMPDIR=/tmp
+     - OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m
     cap_add:
      - IPC_LOCK
     ulimits:
@@ -632,7 +631,7 @@ services:
     mem_limit: 4g
     ports:
      - "127.0.0.1:64298:9200"
-    image: ${TPOT_REPO}/elasticsearch:${TPOT_VERSION}
+    image: ${TPOT_REPO}/opensearch:${TPOT_VERSION}
     pull_policy: ${TPOT_PULL_POLICY}
     volumes:
      - ${TPOT_DATA_PATH}:/data
@@ -642,7 +641,7 @@ services:
     container_name: logstash
     restart: always
     depends_on:
-      elasticsearch:
+      opensearch:
         condition: service_healthy
     environment:
      - LS_JAVA_OPTS=-Xms1024m -Xmx1024m
@@ -657,7 +656,7 @@ services:
     pull_policy: ${TPOT_PULL_POLICY}
     volumes:
      - ${TPOT_DATA_PATH}:/data
-#### /ELK
+#### /OpenSearch stack
 
 # Ewsposter service
   ewsposter:

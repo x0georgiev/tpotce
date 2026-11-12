@@ -1,0 +1,16 @@
+server.host: "0.0.0.0"
+server.name: "T-Pot"
+opensearch.hosts: ["http://opensearch:9200"]
+opensearch.requestTimeout: 60000
+opensearch.shardTimeout: 60000
+# Saved objects index
+opensearchDashboards.index: ".opensearch_dashboards"
+# T-Pot serves a single local cluster, no external data sources
+data_source.enabled: false
+# T-Pot serves Dashboards behind nginx under /dashboards. With rewriteBasePath the
+# prefix is handled by Dashboards itself, so nginx proxies the path unchanged and
+# the local port (127.0.0.1:64296/dashboards/) works as well, e.g. through an SSH tunnel.
+server.basePath: "/dashboards"
+server.rewriteBasePath: true
+# Do not show the welcome screen
+home.disableWelcomeScreen: true

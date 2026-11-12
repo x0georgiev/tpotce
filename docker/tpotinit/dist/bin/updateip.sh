@@ -38,7 +38,7 @@ tee /data/ews/conf/ews.ip << EOF
 [MAIN]
 ip = $myEXTIP
 EOF
-tee /data/tpot/etc/compose/elk_environment << EOF
+tee /data/tpot/etc/compose/tpot_environment << EOF
 HONEY_UUID=$myUUID
 MY_EXTIP=$myEXTIP
 MY_INTIP=$myLOCALIP

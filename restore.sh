@@ -11,12 +11,14 @@ myTPOTDIR="${HOME}/tpotce"
 myBACKUPDIR="${HOME}/tpot_backups"
 myARCHIVE=""
 myCONFIRMED=""
-myKIBANA="http://127.0.0.1:64296"
-myES="http://127.0.0.1:64298"
+# OpenSearch Dashboards runs with the basePath /dashboards and rewrites it, so its
+# API only answers below that prefix
+myDASHBOARDS="http://127.0.0.1:64296/dashboards"
+myOS="http://127.0.0.1:64298"
 
-# How long to wait for Kibana before printing the commands to run by hand. Weaker
-# hardware is allowed to take longer.
-myKIBANA_TIMEOUT="${TPOT_KIBANA_TIMEOUT:-300}"
+# How long to wait for OpenSearch Dashboards before printing the commands to run by
+# hand. Weaker hardware is allowed to take longer.
+myDASHBOARDS_TIMEOUT="${TPOT_DASHBOARDS_TIMEOUT:-300}"
 myTMPDIR=""
 
 # What to restore. Empty means: ask.
@@ -25,7 +27,7 @@ myDO_CONFIG=""
 myDO_PATCH=""
 myDO_UNTRACKED=""
 myDO_DATA=""
-myDO_ELASTIC=""
+myDO_OPENSEARCH=""
 
 myRESTORER=$(cat << "EOF"
  _____     ____       _     ____           _
@@ -85,6 +87,11 @@ function fuARCHIVE_LIST () {
 # What does the archive hold?
 function fuHAS () {   # $1 = Member oder Praefix
 	grep -q "$1" "${myTMPDIR}/toc" 2>/dev/null
+}
+
+# Does the archive hold OpenSearch state (Dashboards objects, ISM policy)?
+function fuHAS_OPENSEARCH () {
+	fuHAS "^opensearch/osd_export.ndjson$" || fuHAS "^opensearch/ism_policy_tpot.json$"
 }
 
 function fuLIST () {
@@ -174,11 +181,11 @@ function fuCHOOSE () {
 	if fuHAS "^data/"; then
 	  fuASK "Restore the files from data/ (certificates, uuid, host keys)?" && myDO_DATA="1"
 	fi
-	if fuHAS "^elastic/"; then
-	  fuASK "Import the Kibana objects and the ILM policy? T-Pot has to run for that." && myDO_ELASTIC="1"
+	if fuHAS_OPENSEARCH; then
+	  fuASK "Import the OpenSearch Dashboards objects and the ISM policy? T-Pot has to run for that." && myDO_OPENSEARCH="1"
 	fi
 	echo
-	if [ -z "${myDO_GIT}${myDO_CONFIG}${myDO_PATCH}${myDO_UNTRACKED}${myDO_DATA}${myDO_ELASTIC}" ];
+	if [ -z "${myDO_GIT}${myDO_CONFIG}${myDO_PATCH}${myDO_UNTRACKED}${myDO_DATA}${myDO_OPENSEARCH}" ];
 	  then
 	    echo "###### $myBLUE""Nothing selected, leaving everything as it is.""$myWHITE"
 	    echo
@@ -331,43 +338,55 @@ function fuDO_DATA () {
 	fi
 }
 
-# The Elasticsearch import needs a running instance - unlike everything else, which
+# The OpenSearch import needs a running instance - unlike everything else, which
 # wants T-Pot stopped. So it runs last, after the start.
-function fuDO_ELASTIC () {
+function fuDO_OPENSEARCH () {
 	local myWAIT=0
 	local myOBJ=0
 	local myKEEP=""
-	[ -z "${myDO_ELASTIC}" ] && return
+	local myCODE=""
+	local mySEQ=""
+	local myTERM=""
+	local myQUERY=""
+	[ -z "${myDO_OPENSEARCH}" ] && return
 	echo
-	echo "### Importing the Elasticsearch state ..."
-	rm -rf "${myTMPDIR}/elastic"
-	tar xf "${myARCHIVE}" -C "${myTMPDIR}" elastic 2>/dev/null
-	echo -n "###### $myBLUE Waiting for Kibana on ${myKIBANA} $myWHITE"
-	while [ "${myWAIT}" -lt "${myKIBANA_TIMEOUT}" ];
+	echo "### Importing the OpenSearch state ..."
+	rm -rf "${myTMPDIR}/opensearch"
+	tar xf "${myARCHIVE}" -C "${myTMPDIR}" opensearch 2>/dev/null
+	echo -n "###### $myBLUE Waiting for OpenSearch Dashboards on ${myDASHBOARDS} $myWHITE"
+	while [ "${myWAIT}" -lt "${myDASHBOARDS_TIMEOUT}" ];
 	  do
-	    curl -s -f -o /dev/null --connect-timeout 3 "${myKIBANA}/api/status" && break
+	    curl -s -f -o /dev/null --connect-timeout 3 "${myDASHBOARDS}/api/status" && break
 	    sleep 5
 	    myWAIT=$((myWAIT+5))
 	    echo -n "."
 	done
-	if ! curl -s -f -o /dev/null "${myKIBANA}/api/status";
+	if ! curl -s -f -o /dev/null "${myDASHBOARDS}/api/status";
 	  then
 	    echo " [ $myRED""NOT OK""$myWHITE ]"
 	    # The files sit in the working directory, which is about to vanish - for the
 	    # manual route they have to stay, and the commands have to name the real path.
-	    myKEEP="${myBACKUPDIR}/${myDATE}_elastic"
-	    mkdir -p "${myKEEP}" && cp -a "${myTMPDIR}/elastic/." "${myKEEP}/" 2>/dev/null
-	    echo "###### $myBLUE""Kibana did not come up in ${myWAIT}s. The files are in ${myKEEP}, run these once it does:""$myWHITE"
-	    echo "######   $myBLUE""curl -X POST '${myKIBANA}/api/saved_objects/_import?overwrite=true' -H 'kbn-xsrf: true' --form file=@${myKEEP}/kibana_export.ndjson""$myWHITE"
-	    echo "######   $myBLUE""curl -X PUT '${myES}/_ilm/policy/tpot' -H 'Content-Type: application/json' -d @${myKEEP}/ilm_policy_tpot.json""$myWHITE"
+	    myKEEP="${myBACKUPDIR}/${myDATE}_opensearch"
+	    mkdir -p "${myKEEP}" && cp -a "${myTMPDIR}/opensearch/." "${myKEEP}/" 2>/dev/null
+	    echo "###### $myBLUE""OpenSearch Dashboards did not come up in ${myWAIT}s. The files are in ${myKEEP}, run these once it does:""$myWHITE"
+	    if [ -s "${myKEEP}/osd_export.ndjson" ];
+	      then
+	        echo "######   $myBLUE""curl -X POST '${myDASHBOARDS}/api/saved_objects/_import?overwrite=true' -H 'osd-xsrf: true' --form file=@${myKEEP}/osd_export.ndjson""$myWHITE"
+	    fi
+	    if [ -s "${myKEEP}/ism_policy_tpot.json" ];
+	      then
+	        echo "######   $myBLUE""curl '${myOS}/_plugins/_ism/policies/tpot'   # note _seq_no and _primary_term, if the policy exists""$myWHITE"
+	        echo "######   $myBLUE""curl -X PUT '${myOS}/_plugins/_ism/policies/tpot?if_seq_no=<_seq_no>&if_primary_term=<_primary_term>' -H 'Content-Type: application/json' -d @${myKEEP}/ism_policy_tpot.json""$myWHITE"
+	        echo "######   $myBLUE""(leave out '?if_seq_no=...&if_primary_term=...' if the GET above returned 404)""$myWHITE"
+	    fi
 	    return 1
 	fi
 	echo " [ $myGREEN"OK"$myWHITE ] after ${myWAIT}s"
-	if [ -s "${myTMPDIR}/elastic/kibana_export.ndjson" ];
+	if [ -s "${myTMPDIR}/opensearch/osd_export.ndjson" ];
 	  then
-	    echo -n "###### $myBLUE Importing the Kibana objects.$myWHITE "
-	    if curl -s -f -X POST "${myKIBANA}/api/saved_objects/_import?overwrite=true" \
-	         -H "kbn-xsrf: true" --form file=@"${myTMPDIR}/elastic/kibana_export.ndjson" \
+	    echo -n "###### $myBLUE Importing the OpenSearch Dashboards objects.$myWHITE "
+	    if curl -s -f -X POST "${myDASHBOARDS}/api/saved_objects/_import?overwrite=true" \
+	         -H "osd-xsrf: true" --form file=@"${myTMPDIR}/opensearch/osd_export.ndjson" \
 	         -o "${myTMPDIR}/import.json";
 	      then
 	        myOBJ=$(sed -n 's/.*"successCount":\([0-9]*\).*/\1/p' "${myTMPDIR}/import.json")
@@ -382,19 +401,42 @@ function fuDO_ELASTIC () {
 	        echo " [ $myRED""NOT OK""$myWHITE ]"
 	    fi
 	fi
-	if [ -s "${myTMPDIR}/elastic/ilm_policy_tpot.json" ];
+	if [ -s "${myTMPDIR}/opensearch/ism_policy_tpot.json" ];
 	  then
-	    echo -n "###### $myBLUE Putting the ILM policy back.$myWHITE "
-	    # update.sh stored it ready to be put back, so this is a plain PUT against the
-	    # Elasticsearch port every edition that ships it publishes on the loopback.
-	    if curl -s -f -X PUT "${myES}/_ilm/policy/tpot" \
+	    echo -n "###### $myBLUE Putting the ISM policy back.$myWHITE "
+	    # update.sh stored it ready to be put back. Logstash creates the policy on
+	    # every start, so it usually exists already - and then OpenSearch only takes
+	    # the PUT with the _seq_no and _primary_term of the current version.
+	    myCODE=$(curl -s -o "${myTMPDIR}/ism_current.json" -w "%{http_code}" "${myOS}/_plugins/_ism/policies/tpot")
+	    case "${myCODE}" in
+	      200)
+	        mySEQ=$(sed -n 's/.*"_seq_no":\([0-9]*\).*/\1/p' "${myTMPDIR}/ism_current.json")
+	        myTERM=$(sed -n 's/.*"_primary_term":\([0-9]*\).*/\1/p' "${myTMPDIR}/ism_current.json")
+	        [ -n "${mySEQ}" ] && [ -n "${myTERM}" ] && myQUERY="?if_seq_no=${mySEQ}&if_primary_term=${myTERM}"
+	        ;;
+	      404)
+	        myQUERY=""
+	        ;;
+	      *)
+	        myCODE="unreachable"
+	        ;;
+	    esac
+	    if [ "${myCODE}" = "200" ] && [ -z "${myQUERY}" ];
+	      then
+	        echo " [ $myRED""WARNING""$myWHITE ]"
+	        echo "###### $myBLUE""Could not read the version of the existing ISM policy, the file is in the archive under opensearch/.""$myWHITE"
+	    elif [ "${myCODE}" = "unreachable" ];
+	      then
+	        echo " [ $myRED""WARNING""$myWHITE ]"
+	        echo "###### $myBLUE""OpenSearch did not answer on ${myOS}, the file is in the archive under opensearch/.""$myWHITE"
+	    elif curl -s -f -X PUT "${myOS}/_plugins/_ism/policies/tpot${myQUERY}" \
 	         -H "Content-Type: application/json" \
-	         -d @"${myTMPDIR}/elastic/ilm_policy_tpot.json" -o /dev/null;
+	         -d @"${myTMPDIR}/opensearch/ism_policy_tpot.json" -o /dev/null;
 	      then
 	        echo "[ $myGREEN"OK"$myWHITE ]"
 	      else
 	        echo " [ $myRED""WARNING""$myWHITE ]"
-	        echo "###### $myBLUE""Could not put the ILM policy back, the file is in the archive under elastic/.""$myWHITE"
+	        echo "###### $myBLUE""Could not put the ISM policy back, the file is in the archive under opensearch/.""$myWHITE"
 	    fi
 	fi
 }
@@ -446,12 +488,12 @@ if [ -n "${myCONFIRMED}" ];
     fuHAS "^tracked.patch$"  && myDO_PATCH="1"
     fuHAS "^untracked/"      && myDO_UNTRACKED="1"
     fuHAS "^data/"           && myDO_DATA="1"
-    fuHAS "^elastic/"        && myDO_ELASTIC="1"
+    fuHAS_OPENSEARCH         && myDO_OPENSEARCH="1"
   else
     fuCHOOSE
 fi
 
-# Phase 1 - everything that needs T-Pot stopped. If only the Elasticsearch import
+# Phase 1 - everything that needs T-Pot stopped. If only the OpenSearch import
 # was picked there is nothing to do here and T-Pot can keep running.
 if [ -n "${myDO_GIT}${myDO_CONFIG}${myDO_PATCH}${myDO_UNTRACKED}${myDO_DATA}" ];
   then
@@ -463,15 +505,15 @@ fuDO_CONFIG
 fuDO_UNTRACKED
 fuDO_DATA
 
-# Phase 2 - the Elasticsearch import needs a running instance
-if [ -n "${myDO_ELASTIC}" ];
+# Phase 2 - the OpenSearch import needs a running instance
+if [ -n "${myDO_OPENSEARCH}" ];
   then
     # If T-Pot kept running there is nothing to start
     if [ -n "${myDO_GIT}${myDO_CONFIG}${myDO_PATCH}${myDO_UNTRACKED}${myDO_DATA}" ];
       then
         fuSTART_TPOT
     fi
-    fuDO_ELASTIC
+    fuDO_OPENSEARCH
   else
     echo
     echo "### Done. You can now start T-Pot using 'systemctl start tpot' or 'docker compose up -d'."

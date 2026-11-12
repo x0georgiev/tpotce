@@ -193,14 +193,23 @@ fuELASTICPOT () {
   chown tpot:tpot /data/elasticpot -R
 }
 
-# Let's create a function to clean up and prepare elk data
-fuELK () {
-  # ELK data will be kept for <= 90 days, check /etc/crontab for curator modification
-  # ELK daemon log files will be removed
-  if [ "$myPERSISTENCE" != "on" ]; then rm -rf /data/elk/log/*; fi
-  mkdir -vp /data/elk/{data,log,listbot}
-  chmod 770 /data/elk -R
-  chown tpot:tpot /data/elk -R
+# Let's create a function to clean up and prepare logstash data
+fuLOGSTASH () {
+  # Logstash log files will be removed, the listbot translation map cache is kept
+  if [ "$myPERSISTENCE" != "on" ]; then rm -rf /data/logstash/log/*; fi
+  mkdir -vp /data/logstash/{log,listbot}
+  chmod 770 /data/logstash -R
+  chown tpot:tpot /data/logstash -R
+}
+
+# Let's create a function to clean up and prepare opensearch data
+fuOPENSEARCH () {
+  # OpenSearch data retention is handled by the T-Pot ISM policy (30 days by default)
+  # OpenSearch daemon log files will be removed
+  if [ "$myPERSISTENCE" != "on" ]; then rm -rf /data/opensearch/log/*; fi
+  mkdir -vp /data/opensearch/{data,log}
+  chmod 770 /data/opensearch -R
+  chown tpot:tpot /data/opensearch -R
 }
 
 # Let's create a function to clean up and prepare endlessh data
@@ -448,7 +457,8 @@ fuDDOSPOT
 fuDICOMPOT
 fuDIONAEA
 fuELASTICPOT
-fuELK
+fuLOGSTASH
+fuOPENSEARCH
 fuENDLESSH
 fuFATT
 fuGALAH

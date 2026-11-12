@@ -54,14 +54,15 @@ myPULLOK=""
 mySTART=""
 
 # Both are published on the loopback interface by every edition that ships them,
-# so neither needs a detour through a container.
-myKIBANA="http://127.0.0.1:64296"
-myES="http://127.0.0.1:64298"
+# so neither needs a detour through a container. OpenSearch Dashboards runs with
+# the basePath /dashboards and rewrites it, so its API only answers below that prefix.
+myDASHBOARDS="http://127.0.0.1:64296/dashboards"
+myOS="http://127.0.0.1:64298"
 
 # How long to wait for a service this installation runs but that is not answering
-# yet. Kibana needs about a minute after a start before it does, and an update run
-# right after a reboot would otherwise walk away without the saved objects.
-myELASTIC_GRACE="${TPOT_ELASTIC_GRACE:-120}"
+# yet. Dashboards needs about a minute after a start before it does, and an update
+# run right after a reboot would otherwise walk away without the saved objects.
+myOPENSEARCH_GRACE="${TPOT_OPENSEARCH_GRACE:-120}"
 
 # Working directory, cleaned up when the script ends
 myTMPDIR=""
@@ -226,7 +227,7 @@ function fuROTATE () {
 }
 
 # Roughly what the archive needs. The allowance covers MANIFEST, the patch and the
-# Elasticsearch export that is added later.
+# OpenSearch export that is added later.
 function fuBACKUP_SIZE () {
 	local myPATHS=() myJEWEL="" mySUM=0
 	[ -f "$HOME/tpotce/.env" ] && myPATHS+=("$HOME/tpotce/.env")
@@ -240,7 +241,7 @@ function fuBACKUP_SIZE () {
 	        [ -e "$HOME/tpotce/${myJEWEL}" ] && myPATHS+=("$HOME/tpotce/${myJEWEL}")
 	      done;
 	fi
-	[ -d "${myTMPDIR}/stage/elastic" ] && myPATHS+=("${myTMPDIR}/stage/elastic")
+	[ -d "${myTMPDIR}/stage/opensearch" ] && myPATHS+=("${myTMPDIR}/stage/opensearch")
 	if [ ${#myPATHS[@]} -gt 0 ];
 	  then
 	    mySUM=$(sudo du -scb "${myPATHS[@]}" 2>/dev/null | tail -1 | cut -f1)
@@ -558,8 +559,8 @@ function fuSTOP_TPOT () {
 	echo
 }
 
-# Does this installation run the service at all? A SENSOR runs neither Kibana nor
-# Elasticsearch, MOBILE runs Elasticsearch without Kibana - waiting for something
+# Does this installation run the service at all? A SENSOR runs neither OpenSearch
+# nor Dashboards, MOBILE runs OpenSearch without Dashboards - waiting for something
 # that was never deployed would only delay every single update.
 function fuCOMPOSE_HAS () {   # $1 = service name
 	grep -qE "^  $1:" "$HOME/tpotce/docker-compose.yml" 2>/dev/null
@@ -575,8 +576,8 @@ function fuCONTAINER_UP () {   # $1 = container name
 function fuWAIT_FOR () {   # $1 = URL, $2 = label
 	local myWAIT=0
 	curl -s -f -o /dev/null --connect-timeout 5 "$1" && return 0
-	echo -n "###### $myBLUE Waiting up to ${myELASTIC_GRACE}s for $2 $myWHITE"
-	while [ "${myWAIT}" -lt "${myELASTIC_GRACE}" ];
+	echo -n "###### $myBLUE Waiting up to ${myOPENSEARCH_GRACE}s for $2 $myWHITE"
+	while [ "${myWAIT}" -lt "${myOPENSEARCH_GRACE}" ];
 	  do
 	    sleep 5
 	    myWAIT=$((myWAIT+5))
@@ -593,7 +594,7 @@ function fuWAIT_FOR () {   # $1 = URL, $2 = label
 
 # Is the service reachable, waiting for it if it is still coming up? Returns 1 and
 # says why if there is nothing to wait for.
-function fuELASTIC_READY () {   # $1 = service, $2 = container, $3 = URL, $4 = label
+function fuOPENSEARCH_READY () {   # $1 = service, $2 = container, $3 = URL, $4 = label
 	if ! fuCOMPOSE_HAS "$1";
 	  then
 	    echo "###### $myBLUE""This edition does not run $4, nothing to save.""$myWHITE"
@@ -606,22 +607,22 @@ function fuELASTIC_READY () {   # $1 = service, $2 = container, $3 = URL, $4 = l
 	fi
 	if ! fuWAIT_FOR "$3" "$4";
 	  then
-	    echo "###### $myBLUE""$4 did not answer within ${myELASTIC_GRACE}s, it is NOT in the backup.""$myWHITE"" [ $myRED""WARNING""$myWHITE ]"
-	    echo "###### $myBLUE""Raise the wait with TPOT_ELASTIC_GRACE=<seconds> if this machine needs longer.""$myWHITE"
+	    echo "###### $myBLUE""$4 did not answer within ${myOPENSEARCH_GRACE}s, it is NOT in the backup.""$myWHITE"" [ $myRED""WARNING""$myWHITE ]"
+	    echo "###### $myBLUE""Raise the wait with TPOT_OPENSEARCH_GRACE=<seconds> if this machine needs longer.""$myWHITE"
 	    return 1
 	fi
 	return 0
 }
 
-# Save the state that lives in Elasticsearch rather than in a file: the user's own
-# Kibana objects and the ILM policy the retention hangs on. Runs before fuSTOP_TPOT
-# because both need a running instance. The README used to ask the user to export
-# this by hand, and update.sh gave that hint at the end of the run - too late to
-# act on.
-function fuEXPORT_ELASTIC () {
+# Save the state that lives in OpenSearch rather than in a file: the user's own
+# OpenSearch Dashboards objects and the ISM policy the retention hangs on. Runs
+# before fuSTOP_TPOT because both need a running instance. The README used to ask
+# the user to export this by hand, and update.sh gave that hint at the end of the
+# run - too late to act on.
+function fuEXPORT_OPENSEARCH () {
 	local myOUT=""
 	echo
-	echo "### Saving the Elasticsearch state ..."
+	echo "### Saving the OpenSearch state ..."
 	if [ -n "${myPREPARED}" ];
 	  then
 	    echo "###### $myBLUE""Already saved before the restart, T-Pot is stopped by now.""$myWHITE"" [ $myGREEN""OK""$myWHITE ]"
@@ -629,48 +630,49 @@ function fuEXPORT_ELASTIC () {
 	    return
 	fi
 	fuTMPDIR
-	myOUT="${myTMPDIR}/stage/elastic"
+	myOUT="${myTMPDIR}/stage/opensearch"
 	mkdir -p "${myOUT}"
-	# Two independent checks rather than one: a SENSOR runs neither service, MOBILE
-	# runs Elasticsearch without Kibana.
-	if fuELASTIC_READY kibana kibana "${myKIBANA}/api/status" "Kibana";
+	# Two independent checks rather than one: a SENSOR runs neither service,
+	# MOBILE runs OpenSearch without Dashboards.
+	if fuOPENSEARCH_READY opensearch-dashboards opensearch-dashboards "${myDASHBOARDS}/api/status" "OpenSearch Dashboards";
 	  then
-	    echo -n "###### $myBLUE Exporting Kibana objects.$myWHITE "
-	    if curl -s -f -X POST "${myKIBANA}/api/saved_objects/_export" \
-	         -H "kbn-xsrf: true" -H "Content-Type: application/json" \
-	         -d '{"type":"*","excludeExportDetails":true}' \
-	         -o "${myOUT}/kibana_export.ndjson";
+	    echo -n "###### $myBLUE Exporting OpenSearch Dashboards objects.$myWHITE "
+	    # Dashboards does not reliably take "type":"*", so the types are named
+	    if curl -s -f -X POST "${myDASHBOARDS}/api/saved_objects/_export" \
+	         -H "osd-xsrf: true" -H "Content-Type: application/json" \
+	         -d '{"type":["config","index-pattern","visualization","dashboard","search","query","url"],"excludeExportDetails":true}' \
+	         -o "${myOUT}/osd_export.ndjson";
 	      then
-	        echo "[ $myGREEN"OK"$myWHITE ] $(grep -c . "${myOUT}/kibana_export.ndjson") objects"
+	        echo "[ $myGREEN"OK"$myWHITE ] $(grep -c . "${myOUT}/osd_export.ndjson") objects"
 	      else
 	        echo " [ $myRED""WARNING""$myWHITE ]"
-	        rm -f "${myOUT}/kibana_export.ndjson"
+	        rm -f "${myOUT}/osd_export.ndjson"
 	    fi
 	fi
-	# The ILM policy is not a saved object, it comes from Elasticsearch itself. What
-	# GET returns is wrapped in the policy name, which PUT rejects, so it is stored
-	# ready to be put back - restoring it is then a single curl.
-	if fuELASTIC_READY elasticsearch elasticsearch "${myES}" "Elasticsearch";
+	# The ISM policy is not a saved object, it comes from OpenSearch itself. GET
+	# wraps it in _id, _seq_no and _primary_term, which PUT does not take, so only
+	# the policy is stored, ready to be put back.
+	if fuOPENSEARCH_READY opensearch opensearch "${myOS}" "OpenSearch";
 	  then
-	    echo -n "###### $myBLUE Exporting the ILM policy.$myWHITE "
-	    if curl -s -f "${myES}/_ilm/policy/tpot" -o "${myTMPDIR}/ilm_raw.json" \
+	    echo -n "###### $myBLUE Exporting the ISM policy.$myWHITE "
+	    if curl -s -f "${myOS}/_plugins/_ism/policies/tpot" -o "${myTMPDIR}/ism_raw.json" \
 	       && python3 -c "
 import json
-myRAW = json.load(open('${myTMPDIR}/ilm_raw.json'))
-json.dump({'policy': myRAW['tpot']['policy']}, open('${myOUT}/ilm_policy_tpot.json', 'w'), indent=2)
+myRAW = json.load(open('${myTMPDIR}/ism_raw.json'))
+json.dump({'policy': myRAW['policy']}, open('${myOUT}/ism_policy_tpot.json', 'w'), indent=2)
 " 2>/dev/null;
 	      then
 	        echo "[ $myGREEN"OK"$myWHITE ]"
 	      else
 	        echo " [ $myRED""WARNING""$myWHITE ]"
-	        rm -f "${myOUT}/ilm_policy_tpot.json"
+	        rm -f "${myOUT}/ism_policy_tpot.json"
 	    fi
 	fi
 	if [ -z "$(ls -A "${myOUT}" 2>/dev/null)" ];
 	  then
 	    rmdir "${myOUT}" 2>/dev/null
 	  else
-	    echo "###### $myBLUE""Saved to the archive under 'elastic/'.""$myWHITE"
+	    echo "###### $myBLUE""Saved to the archive under 'opensearch/'.""$myWHITE"
 	fi
 	echo
 }
@@ -730,7 +732,7 @@ function fuBACKUP () {
 	    exit 1
 	fi
 	myARCHIVE=$(fuARCHIVE_NAME)
-	# fuEXPORT_ELASTIC may already have put elastic/ in here
+	# fuEXPORT_OPENSEARCH may already have put opensearch/ in here
 	myStage="${myTMPDIR}/stage"
 	mkdir -p "${myStage}"
 
@@ -773,7 +775,7 @@ function fuBACKUP () {
 	[ -f "${myStage}/env" ]                && myTARGETS="${myTARGETS} env"
 	[ -f "${myStage}/docker-compose.yml" ] && myTARGETS="${myTARGETS} docker-compose.yml"
 	[ -d "${myStage}/untracked" ]          && myTARGETS="${myTARGETS} untracked"
-	[ -d "${myStage}/elastic" ]            && myTARGETS="${myTARGETS} elastic"
+	[ -d "${myStage}/opensearch" ]         && myTARGETS="${myTARGETS} opensearch"
 
 	# With `--full` all of data/, otherwise only the irreplaceable files. Both belong
 	# to tpot:tpot with 0770, which the archive has to record.
@@ -883,11 +885,11 @@ function fuUPDATER () {
 	    echo "### Your previous one is in the backup as 'docker-compose.yml'."
 	fi
 	echo "### We stored the previous version as backup in $myARCHIVE."
-	echo "### Your own Kibana objects and the ILM policy were saved to the archive before"
-	echo "### T-Pot was stopped, 'restore.sh' can put them back."
-	echo "### Some updates ship newer Kibana objects. Download them here if they changed:"
-	echo "### https://raw.githubusercontent.com/telekom-security/tpotce/refs/heads/master/docker/tpotinit/dist/etc/objects/kibana_export.ndjson.zip"
-	echo "### Import through the Kibana WebUI: Management > Saved Objects > Import"
+	echo "### Your own OpenSearch Dashboards objects and the ISM policy were saved to the"
+	echo "### archive before T-Pot was stopped, 'restore.sh' can put them back."
+	echo "### Some updates ship newer OpenSearch Dashboards objects. Download them here if they changed:"
+	echo "### https://raw.githubusercontent.com/telekom-security/tpotce/refs/heads/master/docker/tpotinit/dist/etc/objects/osd_export.ndjson.zip"
+	echo "### Import through the OpenSearch Dashboards WebUI: Dashboards Management > Saved objects > Import"
 	echo
 }
 
@@ -1090,8 +1092,8 @@ fuCHECKINET "https://index.docker.io https://github.com"
 fuCHECK_SOURCE
 fuCHECK_EDITION
 fuCHECK_BACKUP_SPACE
-# The Elasticsearch export needs a running instance, so it goes before the stop
-fuEXPORT_ELASTIC
+# The OpenSearch export needs a running instance, so it goes before the stop
+fuEXPORT_OPENSEARCH
 fuSTOP_TPOT
 fuBACKUP
 fuSELFUPDATE "$@"

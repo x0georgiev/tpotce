@@ -363,23 +363,23 @@ services:
       context: ../tpotinit/
       <<: *common-build
 
-#### ELK
-## Elasticsearch
-  elasticsearch:
-    image: ${TPOT_DOCKER_REPO}/elasticsearch:${TPOT_VERSION}
+#### OpenSearch stack
+## OpenSearch
+  opensearch:
+    image: ${TPOT_DOCKER_REPO}/opensearch:${TPOT_VERSION}
     build:
       tags:
-        - ${TPOT_GHCR_REPO}/elasticsearch:${TPOT_VERSION}
-      context: ../elk/elasticsearch/
+        - ${TPOT_GHCR_REPO}/opensearch:${TPOT_VERSION}
+      context: ../opensearch/
       <<: *common-build
 
-## Kibana
-  kibana:
-    image: ${TPOT_DOCKER_REPO}/kibana:${TPOT_VERSION}
+## OpenSearch Dashboards
+  opensearch-dashboards:
+    image: ${TPOT_DOCKER_REPO}/opensearch-dashboards:${TPOT_VERSION}
     build:
       tags:
-        - ${TPOT_GHCR_REPO}/kibana:${TPOT_VERSION}
-      context: ../elk/kibana/
+        - ${TPOT_GHCR_REPO}/opensearch-dashboards:${TPOT_VERSION}
+      context: ../opensearch-dashboards/
       <<: *common-build
 
 ## Logstash
@@ -388,7 +388,7 @@ services:
     build:
       tags:
         - ${TPOT_GHCR_REPO}/logstash:${TPOT_VERSION}
-      context: ../elk/logstash/
+      context: ../logstash/
       <<: *common-build
 
 ## Map Web
@@ -397,7 +397,7 @@ services:
     build:
       tags:
         - ${TPOT_GHCR_REPO}/map:${TPOT_VERSION}
-      context: ../elk/map/
+      context: ../map/
       <<: *common-build
 ####
 
