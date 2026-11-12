@@ -1,15 +1,14 @@
 services:
 
-# ELK services
-## Elasticsearch service
-  elasticsearch:
+# OpenSearch stack
+## OpenSearch service
+  opensearch:
     build: .
-    container_name: elasticsearch
+    container_name: opensearch
     restart: always
     environment:
      - bootstrap.memory_lock=true
-     - ES_JAVA_OPTS=-Xms1024m -Xmx1024m
-     - ES_TMPDIR=/tmp
+     - OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m
     cap_add:
      - IPC_LOCK
     ulimits:
@@ -19,9 +18,9 @@ services:
       nofile:
         soft: 65536
         hard: 65536
-    mem_limit: 2g
+    mem_limit: 4g
     ports:
      - "127.0.0.1:64298:9200"
-    image: "ghcr.io/telekom-security/elasticsearch:24.04.1"
+    image: "ghcr.io/telekom-security/opensearch:24.04.1"
     volumes:
      - $HOME/tpotce/data:/data

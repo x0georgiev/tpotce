@@ -1,9 +1,8 @@
 cluster.name: tpotcluster
 node.name: "tpotcluster-node-01"
-plugins.security.disabled: true
 path:
-    logs: /data/elk/log
-    data: /data/elk/data
+    logs: /data/opensearch/log
+    data: /data/opensearch/data
 http.host: 0.0.0.0
 http.cors.enabled: true
 http.cors.allow-origin: "*"
