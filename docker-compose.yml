@@ -23,7 +23,6 @@ networks:
   tanner_local:
   wordpot_local:
   nginx_local:
-  ewsposter_local:
 
 services:
 
@@ -802,30 +801,6 @@ services:
     image: ${TPOT_REPO}/map:${TPOT_VERSION}
     pull_policy: ${TPOT_PULL_POLICY}
 #### /OpenSearch stack
-
-# Ewsposter service
-  ewsposter:
-    container_name: ewsposter
-    restart: always
-    depends_on:
-      tpotinit:
-        condition: service_healthy
-    networks:
-     - ewsposter_local
-    environment:
-     - EWS_HPFEEDS_ENABLE=false
-     - EWS_HPFEEDS_HOST=host
-     - EWS_HPFEEDS_PORT=port
-     - EWS_HPFEEDS_CHANNELS=channels
-     - EWS_HPFEEDS_IDENT=user
-     - EWS_HPFEEDS_SECRET=secret
-     - EWS_HPFEEDS_TLSCERT=false
-     - EWS_HPFEEDS_FORMAT=json
-    image: ${TPOT_REPO}/ewsposter:${TPOT_VERSION}
-    pull_policy: ${TPOT_PULL_POLICY}
-    volumes:
-     - ${TPOT_DATA_PATH}:/data
-     - ${TPOT_DATA_PATH}/ews/conf/ews.ip:/opt/ewsposter/ews.ip
 
 # Nginx service
   nginx:

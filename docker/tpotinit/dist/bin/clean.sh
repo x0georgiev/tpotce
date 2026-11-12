@@ -97,13 +97,10 @@ logrotate -s $mySTATUS $myCONF
 
 # Let's create a function to clean up and prepare tpotinit data
 fuTPOTINIT () {
-  mkdir -vp /data/ews/conf \
-            /data/tpot/etc/{compose,logrotate} \
+  mkdir -vp /data/tpot/etc/{compose,logrotate} \
             /tmp/etc/
-  chmod 770 /data/ews/ -R
   chmod 770 /data/tpot/ -R
   chmod 770 /tmp/etc/ -R
-  chown tpot:tpot /data/ews/ -R
   chown tpot:tpot /data/tpot/ -R
   chown tpot:tpot /tmp/etc/ -R
 }

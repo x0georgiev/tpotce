@@ -401,15 +401,6 @@ services:
       <<: *common-build
 ####
 
-# Ewsposter
-  ewsposter:
-    image: ${TPOT_DOCKER_REPO}/ewsposter:${TPOT_VERSION}
-    build:
-      tags:
-        - ${TPOT_GHCR_REPO}/ewsposter:${TPOT_VERSION}
-      context: ../ewsposter/
-      <<: *common-build
-
 # Nginx
   nginx:
     image: ${TPOT_DOCKER_REPO}/nginx:${TPOT_VERSION}

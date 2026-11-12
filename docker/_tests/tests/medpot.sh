@@ -11,7 +11,6 @@ DEFAULT_IMAGE="dtagdevsec/medpot:24.04.1"
 IMAGE=""
 HOST_PORT=""
 LOG_DIR=""
-EWS_CFG_FILE=""
 MEDPOT_LOG_FILE=""
 MAPPED_PORT=""
 
@@ -97,22 +96,11 @@ prepare_medpot_harness() {
   test_prepare_harness "${TEST_NAME}"
 
   LOG_DIR="${TEST_TMP_ROOT}/log"
-  EWS_CFG_FILE="${TEST_TMP_ROOT}/ews.cfg"
   MEDPOT_LOG_FILE="${LOG_DIR}/medpot.log"
   TEST_ARTIFACT_LOG_DIR="${LOG_DIR}"
 
   mkdir -p "${LOG_DIR}"
   chmod 0777 "${LOG_DIR}"
-
-  cat > "${EWS_CFG_FILE}" <<EOF
-[EWS]
-rhost_first = http://127.0.0.1:1/
-username = smoke
-token = smoke
-
-[GLASTOPFV3]
-nodeid = glastopfv3-smoke
-EOF
 
   local port_mapping="${TEST_BIND_IP}::2575"
   if [[ -n "${HOST_PORT}" ]]; then
@@ -131,7 +119,6 @@ services:
       - "${port_mapping}"
     volumes:
       - "${LOG_DIR}:/var/log/medpot"
-      - "${EWS_CFG_FILE}:/etc/ews.cfg:ro"
 networks:
   default:
     name: "${TEST_PROJECT_NAME}_net"

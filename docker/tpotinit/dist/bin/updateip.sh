@@ -1,5 +1,5 @@
 #!/bin/bash
-# Let's add the first local ip to the /tmp/etc/issue and external ip to ews.ip file
+# Let's add the first local ip to the /tmp/etc/issue and both IPs to tpot_environment
 # If the external IP cannot be detected, the internal IP will be inherited.
 myUUID=$(cat /data/uuid)
 myLOCALIP=$(ip address show | awk '/inet .*brd/{split($2,a,"/"); print a[1]; exit}')
@@ -34,16 +34,9 @@ echo "$myBLACKHOLE_STATUS" >> /tmp/etc/issue
 echo "|" >> /tmp/etc/issue
 echo "\`----" >> /tmp/etc/issue
 echo >> /tmp/etc/issue
-tee /data/ews/conf/ews.ip << EOF
-[MAIN]
-ip = $myEXTIP
-EOF
 tee /data/tpot/etc/compose/tpot_environment << EOF
 HONEY_UUID=$myUUID
 MY_EXTIP=$myEXTIP
 MY_INTIP=$myLOCALIP
 MY_HOSTNAME=$HOSTNAME
 EOF
-
-chown tpot:tpot /data/ews/conf/ews.ip
-chmod 770 /data/ews/conf/ews.ip

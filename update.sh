@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Some global vars
-myCOMPOSEFILE="~/tpotce/docker-compose.yml"
 myDATE=$(date +%Y%m%d%H%M%S)
 
 # Where the backups live. Its own directory with 0700, because the archives carry
@@ -15,7 +14,6 @@ myBACKUPDIR="${HOME}/tpot_backups"
 myJEWELS="data/uuid
 data/hive.crt
 data/nginx/cert
-data/ews/conf
 data/cowrie/keys
 data/beelzebub/key
 data/galah/cert
@@ -894,11 +892,6 @@ function fuUPDATER () {
 }
 
 function fuRESTORE () {
-	if [ -f '~/tpotce/data/ews/conf/ews.cfg' ] && ! grep 'ews.cfg' $myCOMPOSEFILE > /dev/null; then
-	    echo
-	    echo "### Restoring volume mount for ews.cfg in tpot.yml"
-	    sed -i '/- ${TPOT_DATA_PATH}:\/data/a \ \ \ \ \ - ${TPOT_DATA_PATH}/ews/conf/ews.cfg:/opt/ewsposter/ews.cfg' $myCOMPOSEFILE
-	fi
 	echo "### Restoring T-Pot config file .env"
 	fuTMPDIR
 	# `-C` only applies to the members named after it, hence it comes first. And the

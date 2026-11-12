@@ -1,0 +1,116 @@
+diff --git a/medpot.go b/medpot.go
+index cfbc0cf..524a35e 100644
+--- a/medpot.go
++++ b/medpot.go
+@@ -1,17 +1,13 @@
+ package main
+ 
+ import (
+-	"crypto/tls"
+ 	"encoding/base64"
+ 	"encoding/json"
+ 	"fmt"
+ 	"github.com/davecgh/go-spew/spew"
+-	"github.com/go-ini/ini"
+-	"github.com/mozillazg/request"
+ 	"go.uber.org/zap"
+ 	"io/ioutil"
+ 	"net"
+-	"net/http"
+ 	"os"
+ 	"strings"
+ 	"time"
+@@ -29,56 +25,6 @@ func check(e error) {
+ 	}
+ }
+ 
+-/*
+-	read config from EWS poster for DTAGs Early warning system and T-Pot
+-*/
+-func readConfig() (string, string, string, string) {
+-
+-	cfg, err := ini.Load("/etc/ews.cfg")
+-	if err != nil {
+-		fmt.Printf("Fail to read file: %v", err)
+-		os.Exit(1)
+-	}
+-
+-	target := cfg.Section("EWS").Key("rhost_first").String()
+-	user := cfg.Section("EWS").Key("username").String()
+-	password := cfg.Section("EWS").Key("token").String()
+-	nodeid := cfg.Section("GLASTOPFV3").Key("nodeid").String()
+-	nodeid = strings.Replace(nodeid, "glastopfv3-", "medpot-", -1)
+-	return target, user, password, nodeid
+-
+-}
+-
+-func post(target string, user string, password string, nodeid string, myTime string, port string, ip string, encoded string) {
+-
+-	tr := &http.Transport{
+-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+-	}
+-
+-	c := &http.Client{Transport: tr}
+-	req := request.NewRequest(c)
+-
+-	dat := readFile("ews.xml")
+-	body := strings.Replace(string(dat), "_USERNAME_", user, -1)
+-	body = strings.Replace(body, "_TOKEN_", password, -1)
+-	body = strings.Replace(body, "_NODEID_", nodeid, -1)
+-	body = strings.Replace(body, "_IP_", ip, -1)
+-	body = strings.Replace(body, "_PORT_", port, -1)
+-	body = strings.Replace(body, "_TIME_", myTime, -1)
+-	body = strings.Replace(body, "_DATA_", encoded, -1)
+-
+-	// not set Content-Type
+-	req.Body = strings.NewReader(string(body))
+-	resp, err := req.Post(target)
+-
+-	if err != nil {
+-		fmt.Println("Error http post:", err.Error())
+-	} else {
+-		fmt.Println("Http Reponse", resp.Status)
+-	}
+-
+-}
+-
+ func initLogger() *zap.Logger {
+ 
+ 	rawJSON := []byte(`{
+@@ -112,8 +58,6 @@ func main() {
+ 	currentTime := time.Now().UTC().Format(time.RFC3339)
+ 	fmt.Println(currentTime)
+ 
+-	target, user, password, nodeid := readConfig()
+-
+ 	logger := initLogger()
+ 
+ 	l, err := net.Listen(CONN_TYPE, ":"+CONN_PORT)
+@@ -135,7 +79,7 @@ func main() {
+ 		}
+ 
+ 		// Handle connections in a new goroutine.
+-		go handleRequest(conn, logger, target, user, password, nodeid)
++		go handleRequest(conn, logger)
+ 	}
+ }
+ 
+@@ -186,7 +130,7 @@ func handleClientRequest(conn net.Conn, buf []byte, reqLen int) {
+ }
+ 
+ // Handles incoming requests.
+-func handleRequest(conn net.Conn, logger *zap.Logger, target string, user string, password string, nodeid string) {
++func handleRequest(conn net.Conn, logger *zap.Logger) {
+ 	// Make a buffer to hold incoming data.
+ 
+ 	buf := make([]byte, 1024*1024)
+@@ -235,9 +179,6 @@ func handleRequest(conn net.Conn, logger *zap.Logger, target string, user string
+ 				zap.String("data", encoded),
+ 			)
+ 
+-			// if configured, send bacxk data to PEBA / DTAG T_pot homebase
+-			post(target, user, password, nodeid, myTime, port, ip, encoded)
+-
+ 		}
+ 
+ 		counter = counter + 1

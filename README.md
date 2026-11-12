@@ -52,8 +52,6 @@ env bash -c "$(curl -sL https://github.com/telekom-security/tpotce/raw/master/in
     - [Planning and Certificates](#planning-and-certificates)
     - [Deploying Sensors](#deploying-sensors)
     - [Removing Sensors](#removing-sensors)
-  - [Community Data Submission](#community-data-submission)
-  - [Opt-In HPFEEDS Data Submission](#opt-in-hpfeeds-data-submission)
 - [Remote Access and Tools](#remote-access-and-tools)
   - [SSH](#ssh)
   - [T-Pot Landing Page](#t-pot-landing-page)
@@ -106,7 +104,6 @@ env bash -c "$(curl -sL https://github.com/telekom-security/tpotce/raw/master/in
 - For fast help research the [Issues](https://github.com/telekom-security/tpotce/issues) and [Discussions](https://github.com/telekom-security/tpotce/discussions).
 - The software is designed and offered with best effort in mind. As a community and open source project it uses lots of other open source software and may contain bugs and issues. Report responsibly.
 - Honeypots - by design - should not host any sensitive data. Make sure you don't add any.
-- By default, your data is submitted to [Sicherheitstacho](https://www.sicherheitstacho.eu/start/main). You can disable this in the config (`~/tpotce/docker-compose.yml`) by [removing](#community-data-submission) the `ewsposter` section. But in this case sharing really is caring!
 <br><br>
 
 # Technical Concept
@@ -561,50 +558,6 @@ If you have not done already generate a SSH key to securely login to the **Senso
 Identify the `TPOT_HIVE_USER` ENV on the Sensor in the `$HOME/tpotce/.env` config (it is a base64 encoded string). Now identify the same string in the `LS_WEB_USER` ENV on the Hive in the `$HOME/tpotce/.env` config. Remove the string and restart T-Pot.<br>
 Now you can safely delete the Sensor machine.
 
-## Community Data Submission
-T-Pot is provided in order to make it accessible to everyone interested in honeypots. By default, the captured data is submitted to a community backend. This community backend uses the data to feed [Sicherheitstacho](https://www.sicherheitstacho.eu/).
-You may opt out of the submission by removing the `# Ewsposter service` from `~/tpotce/docker-compose.yml` by following these steps:
-1. Stop T-Pot services: `systemctl stop tpot`
-2. Open `~/tpotce/docker-compose.yml`: `micro ~/tpotce/docker-compose.yml`
-3. Remove the following lines, save and exit micro (`CTRL+Q`):
-```
-# Ewsposter service
-  ewsposter:
-    container_name: ewsposter
-    restart: always
-    depends_on:
-      tpotinit:
-        condition: service_healthy
-    networks:
-     - ewsposter_local
-    environment:
-     - EWS_HPFEEDS_ENABLE=false
-     - EWS_HPFEEDS_HOST=host
-     - EWS_HPFEEDS_PORT=port
-     - EWS_HPFEEDS_CHANNELS=channels
-     - EWS_HPFEEDS_IDENT=user
-     - EWS_HPFEEDS_SECRET=secret
-     - EWS_HPFEEDS_TLSCERT=false
-     - EWS_HPFEEDS_FORMAT=json
-    image: ${TPOT_REPO}/ewsposter:${TPOT_VERSION}
-    pull_policy: ${TPOT_PULL_POLICY}
-    volumes:
-     - ${TPOT_DATA_PATH}:/data
-     - ${TPOT_DATA_PATH}/ews/conf/ews.ip:/opt/ewsposter/ews.ip
-```
-4. Start T-Pot services: `systemctl start tpot`
-
-It is encouraged not to disable the data submission as it is the main purpose of the community approach - as you all know **sharing is caring** 😍
-<br><br>
-
-## Opt-In HPFEEDS Data Submission
-As an Opt-In it is possible to share T-Pot data with 3rd party HPFEEDS brokers.
-1. Follow the instructions [here](#community-data-submission) to stop the T-Pot services and open `~/tpotce/docker-compose.yml`.
-2. Scroll down to the `ewsposter` section and adjust the HPFEEDS settings to your needs.
-3. If you need to add a CA certificate add it to `~/tpotce/data/ews/conf` and set  `EWS_HPFEEDS_TLSCERT=/data/ews/conf/<your_ca.crt>`.
-4. Start T-Pot services: `systemctl start tpot`.
-<br><br>
-
 # Remote Access and Tools
 Remote access to your host / T-Pot is possible with SSH (on **`tcp/64295`**) and some services and tools come with T-Pot to make some of your research tasks a lot easier.
 <br><br>
@@ -713,14 +666,13 @@ The update script will ...
  - remove docker images of earlier versions, keeping the tag your `.env` now names
  - detect the installed T-Pot edition (i.e. `SENSOR`, `MINI`, `LLM`, `TARPIT`, `MOBILE`) and restore it, using this release's `~/tpotce/compose/<edition>.yml` so that new honeypots and changes of the release are included.
  - keep your previous `docker-compose.yml` in the backup archive. If you made changes to it (i.e.
-   removing the `ewsposter` section or a `docker-compose.yml` built with
-   `~/tpotce/compose/customizer.py`) you need to add them again - the run tells you how to compare
-   the two.
+   a `docker-compose.yml` built with `~/tpotce/compose/customizer.py`) you need to add them
+   again - the run tells you how to compare the two.
 
 The backup holds what git cannot bring back: `~/tpotce/.env`, your `docker-compose.yml`, a patch of
 your changes to tracked files, your untracked files, the commit to roll back to, and the files under
 `~/tpotce/data` that exist nowhere else - the installation `uuid`, the nginx certificate your sensors
-depend on, `hive.crt`, the `ews` configuration and the honeypot host keys. Everything else in
+depend on, `hive.crt` and the honeypot host keys. Everything else in
 `~/tpotce` is tracked and comes back from git, and the honeypot data under `~/tpotce/data` is never
 touched by an update. That keeps the archive at roughly a megabyte, which is why it is not
 compressed - on a Raspberry Pi compression would cost time for nothing. Add `--full` if you want
@@ -970,7 +922,6 @@ The software that T-Pot is built on uses the following licenses.
 <br>GPLv3:
 [adbhoney](https://github.com/huuck/ADBHoney),
 [elasticpot](https://gitlab.com/bontchev/elasticpot/-/blob/master/LICENSE),
-[ewsposter](https://github.com/telekom-security/ewsposter),
 [log4pot](https://github.com/thomaspatzke/Log4Pot/blob/master/LICENSE),
 [fatt](https://github.com/0x4D31/fatt/blob/master/LICENSE),
 [heralding](https://github.com/johnnykv/heralding/blob/master/LICENSE.txt),
@@ -1031,7 +982,6 @@ Without open source and the development community we are proud to be a part of, 
 [docker](https://github.com/moby/moby/graphs/contributors),
 [elasticpot](https://gitlab.com/bontchev/elasticpot/-/project_members),
 [endlessh](https://github.com/skeeto/endlessh/graphs/contributors),
-[ewsposter](https://github.com/armedpot/ewsposter/graphs/contributors),
 [fatt](https://github.com/0x4D31/fatt/graphs/contributors),
 [galah](https://github.com/0x4D31/galah/graphs/contributors),
 [glutton](https://github.com/mushorg/glutton/graphs/contributors),
