@@ -1,0 +1,11 @@
+cluster.name: tpotcluster
+node.name: "tpotcluster-node-01"
+plugins.security.disabled: true
+path:
+    logs: /data/elk/log
+    data: /data/elk/data
+http.host: 0.0.0.0
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+indices.query.bool.max_clause_count: 2000
+discovery.type: single-node

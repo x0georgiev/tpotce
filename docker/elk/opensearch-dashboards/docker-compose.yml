@@ -1,0 +1,15 @@
+services:
+
+## OpenSearch Dashboards service
+  opensearch-dashboards:
+    build: .
+    container_name: opensearch-dashboards
+    restart: always
+    stop_signal: SIGKILL
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    mem_limit: 1g
+    ports:
+     - "127.0.0.1:64296:5601"
+    image: "ghcr.io/telekom-security/opensearch-dashboards:24.04.1"

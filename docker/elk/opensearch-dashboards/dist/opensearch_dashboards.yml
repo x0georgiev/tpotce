@@ -1,0 +1,8 @@
+server.host: "0.0.0.0"
+opensearch.hosts: ["http://opensearch:9200"]
+# Security is disabled on the OpenSearch cluster
+opensearch_security.enabled: false
+opensearch.requestTimeout: 60000
+# T-Pot serves Dashboards behind nginx under /kibana
+server.basePath: "/kibana"
+server.rewriteBasePath: false
