@@ -1,5 +1,8 @@
 FROM alpine:3.23
 #
+# Include dist
+COPY dist/ /root/dist/
+#
 # Install packages
 # Application/tool dependencies are exact-pinned (requirements.txt, tools/basemap.lock);
 # Alpine OS packages are intentionally refreshed within the pinned 3.23 channel at image build.
@@ -21,6 +24,16 @@ RUN apk --no-cache -U upgrade && \
     git clone https://github.com/telekom-security/t-pot-attack-map -b 4.0.0 && \
     cd t-pot-attack-map && \
     mv DataServer.py DataServer_v2.py && \
+#
+# The upstream data server targets the Elasticsearch client: use the opensearch-py
+# based client in dist/opensearch_compat.py and point it to the opensearch service.
+    cp /root/dist/opensearch_compat.py . && \
+    sed -i 's#^from elasticsearch import Elasticsearch#from opensearch_compat import OpenSearchClient as Elasticsearch#' DataServer_v2.py && \
+    sed -i "s#http://elasticsearch:9200#http://opensearch:9200#" DataServer_v2.py && \
+    sed -i 's#^elasticsearch==.*#opensearch-py==3.2.0#' requirements.txt && \
+    grep -q '^from opensearch_compat import OpenSearchClient as Elasticsearch' DataServer_v2.py && \
+    grep -q 'http://opensearch:9200' DataServer_v2.py && \
+    grep -q '^opensearch-py==' requirements.txt && \
 #
 # Fetch the pinned basemap artefact (immutable release asset, SHA-256 verified
 # against tools/basemap.lock; --check turns a partial download into a build
