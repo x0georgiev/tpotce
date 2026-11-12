@@ -15,7 +15,6 @@ RUN apk --no-cache -U upgrade && \
 		openssl-dev \
 		postgresql-dev \
 		py3-cryptography \
-		py3-elasticsearch \
 		py3-geoip2 \
 		py3-maxminddb \
 		py3-mysqlclient \
