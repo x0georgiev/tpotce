@@ -26,8 +26,8 @@ repository-code: 'https://github.com/telekom-security/tpotce'
 abstract: >-
   T-Pot is the all in one, optionally distributed, multiarch
   (amd64, arm64) honeypot plattform, supporting 20+
-  honeypots and countless visualization options using the
-  Elastic Stack, animated live attack maps and lots of
+  honeypots and countless visualization options using
+  OpenSearch, animated live attack maps and lots of
   security tools to further improve the deception
   experience.
 keywords:
@@ -36,7 +36,7 @@ keywords:
   - t-pot
   - telekom security
   - docker
-  - elk
+  - opensearch
 license: GPL-3.0
 commit: release
 version: 24.04.1
