@@ -563,18 +563,17 @@ services:
 #### Tools
 ##################
 
-#### ELK
-## Elasticsearch service
-  elasticsearch:
-    container_name: elasticsearch
+#### OpenSearch stack
+## OpenSearch service
+  opensearch:
+    container_name: opensearch
     restart: always
     depends_on:
       tpotinit:
         condition: service_healthy
     environment:
      - bootstrap.memory_lock=true
-     - ES_JAVA_OPTS=-Xms2048m -Xmx2048m
-     - ES_TMPDIR=/tmp
+     - OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m
     networks:
      - nginx_local
     cap_add:
@@ -589,24 +588,24 @@ services:
     mem_limit: 4g
     ports:
      - "127.0.0.1:64298:9200"
-    image: ${TPOT_REPO}/elasticsearch:${TPOT_VERSION}
+    image: ${TPOT_REPO}/opensearch:${TPOT_VERSION}
     pull_policy: ${TPOT_PULL_POLICY}
     volumes:
      - ${TPOT_DATA_PATH}:/data
 
-## Kibana service
-  kibana:
-    container_name: kibana
+## OpenSearch Dashboards service
+  opensearch-dashboards:
+    container_name: opensearch-dashboards
     restart: always
     depends_on:
-      elasticsearch:
+      opensearch:
         condition: service_healthy
     networks:
      - nginx_local
     mem_limit: 1g
     ports:
      - "127.0.0.1:64296:5601"
-    image: ${TPOT_REPO}/kibana:${TPOT_VERSION}
+    image: ${TPOT_REPO}/opensearch-dashboards:${TPOT_VERSION}
     pull_policy: ${TPOT_PULL_POLICY}
 
 ## Logstash service
@@ -614,7 +613,7 @@ services:
     container_name: logstash
     restart: always
     depends_on:
-      elasticsearch:
+      opensearch:
         condition: service_healthy
     networks:
      - nginx_local
@@ -670,7 +669,7 @@ services:
     container_name: map_data
     restart: always
     depends_on:
-      elasticsearch:
+      opensearch:
         condition: service_healthy
     networks:
      - nginx_local
@@ -682,7 +681,7 @@ services:
     tty: true
     image: ${TPOT_REPO}/map:${TPOT_VERSION}
     pull_policy: ${TPOT_PULL_POLICY}
-#### /ELK
+#### /OpenSearch stack
 
 # Ewsposter service
   ewsposter:

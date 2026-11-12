@@ -96,10 +96,10 @@ def enforce_dependencies(selected_services, services):
         for service in tanner_services:
             selected_services[service] = services[service]
 
-    # If kibana is enabled, also enable elasticsearch
-    if 'kibana' in selected_services:
-        selected_services['elasticsearch'] = services['elasticsearch']
-        print_color("[OK] - Kibana requires Elasticsearch which has been added to your configuration.", "green")
+    # If opensearch-dashboards is enabled, also enable opensearch
+    if 'opensearch-dashboards' in selected_services:
+        selected_services['opensearch'] = services['opensearch']
+        print_color("[OK] - OpenSearch Dashboards requires OpenSearch which has been added to your configuration.", "green")
 
     # If spiderfoot is enabled, also enable nginx
     if 'spiderfoot' in selected_services:
@@ -107,11 +107,11 @@ def enforce_dependencies(selected_services, services):
         print_color("[OK] - Spiderfoot requires Nginx which has been added to your configuration.","green")
 
 
-    # If any map services are detected, enable logstash, elasticsearch, nginx, and all map services
+    # If any map services are detected, enable opensearch, nginx, and all map services
     map_services = {'map_web', 'map_redis', 'map_data'}
     if map_services.intersection(selected_services):
         print_color("[OK] - For AttackMap to work all required services have been added to your configuration.", "green")
-        for service in map_services.union({'elasticsearch', 'nginx'}):
+        for service in map_services.union({'opensearch', 'nginx'}):
             selected_services[service] = services[service]
 
     # honeytrap and glutton cannot be active at the same time, always vote in favor of honeytrap
