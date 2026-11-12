@@ -1,10 +1,11 @@
 {
+  "index_patterns": [
+    "logstash-*"
+  ],
+  "priority": 200,
   "template": {
     "settings": {
       "index": {
-        "lifecycle": {
-          "name": "tpot"
-        },
         "mapping": {
           "total_fields": {
             "limit": "2000"
@@ -89,9 +90,5 @@
         }
       }
     }
-  },
-  "index_patterns": [
-    "logstash-*"
-  ],
-  "composed_of": []
+  }
 }

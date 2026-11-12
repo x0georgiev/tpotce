@@ -43,6 +43,7 @@ RUN apt-get update -y && \
     cd /usr/share/logstash && \
     bin/logstash-plugin update logstash-filter-translate && \
 	bin/logstash-plugin install logstash-output-syslog && \
+    bin/logstash-plugin install --version 2.1.1 logstash-output-opensearch && \
     rm /etc/logstash/pipelines.yml && \
     rm /etc/logstash/logstash.yml && \
 #

@@ -135,36 +135,59 @@ if [ "$TPOT_TYPE" != "SENSOR" ];
     echo "T-Pot type: $TPOT_TYPE"
     echo
 
-    # Index Management is happening through ILM, but we need to put T-Pot ILM setting on ES.
-    myTPOTILM=$(curl -s -XGET "http://elasticsearch:9200/_ilm/policy/tpot" | grep "Lifecycle policy not found: tpot" -c)
-    if [ "$myTPOTILM" == "1" ];
+    # Index management is happening through ISM, but we need to put the T-Pot index template and ISM policy on OpenSearch.
+    myTPOTTEMPLATE=$(curl -s -o /dev/null -w "%{http_code}" "http://opensearch:9200/_index_template/tpot")
+    if [ "$myTPOTTEMPLATE" != "200" ];
       then
-        echo "T-Pot ILM template not found on ES, putting it on ES now."
-        curl -XPUT "http://elasticsearch:9200/_ilm/policy/tpot" -H 'Content-Type: application/json' -d'
+        echo "T-Pot index template not found on OpenSearch, putting it on OpenSearch now."
+        curl -s -XPUT "http://opensearch:9200/_index_template/tpot" -H 'Content-Type: application/json' --data-binary @/etc/logstash/tpot-template.json
+        echo
+      else
+        echo "T-Pot index template already configured or OpenSearch not available."
+    fi
+    myTPOTISM=$(curl -s -o /dev/null -w "%{http_code}" "http://opensearch:9200/_plugins/_ism/policies/tpot")
+    if [ "$myTPOTISM" != "200" ];
+      then
+        echo "T-Pot ISM policy not found on OpenSearch, putting it on OpenSearch now."
+        curl -s -XPUT "http://opensearch:9200/_plugins/_ism/policies/tpot" -H 'Content-Type: application/json' -d'
         {
           "policy": {
-            "phases": {
-              "hot": {
-                "min_age": "0ms",
-                "actions": {}
-              },
-              "delete": {
-                "min_age": "30d",
-                "actions": {
-                  "delete": {
-                    "delete_searchable_snapshot": true
+            "description": "T-Pot ISM policy with a retention of 30 days",
+            "default_state": "hot",
+            "states": [
+              {
+                "name": "hot",
+                "actions": [],
+                "transitions": [
+                  {
+                    "state_name": "delete",
+                    "conditions": {
+                      "min_index_age": "30d"
+                    }
                   }
-                }
+                ]
+              },
+              {
+                "name": "delete",
+                "actions": [
+                  {
+                    "delete": {}
+                  }
+                ],
+                "transitions": []
               }
-            },
-            "_meta": {
-              "managed": true,
-              "description": "T-Pot ILM policy with a retention of 30 days"
-            }
+            ],
+            "ism_template": [
+              {
+                "index_patterns": ["logstash-*"],
+                "priority": 100
+              }
+            ]
           }
         }'
+        echo
       else
-        echo "T-Pot ILM already configured or ES not available."
+        echo "T-Pot ISM policy already configured or OpenSearch not available."
     fi
 fi
 echo
