@@ -7,11 +7,11 @@ function fuCLEANUP {
 trap fuCLEANUP EXIT
 
 # Source ENVs from file ...
-if [ -f "/data/tpot/etc/compose/elk_environment" ];
+if [ -f "/data/tpot/etc/compose/tpot_environment" ];
   then
     echo "Found .env, now exporting ..."
     set -o allexport
-    source "/data/tpot/etc/compose/elk_environment"
+    source "/data/tpot/etc/compose/tpot_environment"
     LS_SSL_VERIFICATION="${LS_SSL_VERIFICATION:-full}"
     set +o allexport
 fi
@@ -47,9 +47,9 @@ for i in $mySITES;
   echo $error
 }
 
-# Translation maps are cached in /data/elk/listbot and only downloaded if missing or >= 24h old
+# Translation maps are cached in /data/logstash/listbot and only downloaded if missing or >= 24h old
 myLISTBOTURL="https://listbot.sicherheitstacho.eu"
-myLISTBOTCACHE="/data/elk/listbot"
+myLISTBOTCACHE="/data/logstash/listbot"
 myLISTBOTFILES="cve.yaml.bz2 iprep.yaml.bz2"
 
 # Check if a cached translation map is missing, empty or 24h and older
@@ -135,60 +135,33 @@ if [ "$TPOT_TYPE" != "SENSOR" ];
     echo "T-Pot type: $TPOT_TYPE"
     echo
 
-    # Index management is happening through ISM, but we need to put the T-Pot index template and ISM policy on OpenSearch.
-    myTPOTTEMPLATE=$(curl -s -o /dev/null -w "%{http_code}" "http://opensearch:9200/_index_template/tpot")
-    if [ "$myTPOTTEMPLATE" != "200" ];
+    # Index management is happening through ISM (OpenSearch Index State Management).
+    # The index template is put on every start, so changes to tpot-template.json are
+    # applied to the next daily index.
+    myOS="http://opensearch:9200"
+    until curl -s -f -o /dev/null "${myOS}/_cluster/health?wait_for_status=yellow&timeout=5s";
+      do
+        echo "Waiting for OpenSearch ..."
+        sleep 5
+    done
+    echo -n "Putting T-Pot index template on OpenSearch: "
+    curl -s -XPUT "${myOS}/_index_template/tpot" -H 'Content-Type: application/json' --data-binary @/etc/logstash/tpot-template.json
+    echo
+    # The ISM policy is only put if missing, retention changes made by the user are kept.
+    myTPOTISM=$(curl -s -o /dev/null -w "%{http_code}" "${myOS}/_plugins/_ism/policies/tpot")
+    if [ "$myTPOTISM" == "404" ];
       then
-        echo "T-Pot index template not found on OpenSearch, putting it on OpenSearch now."
-        curl -s -XPUT "http://opensearch:9200/_index_template/tpot" -H 'Content-Type: application/json' --data-binary @/etc/logstash/tpot-template.json
+        echo -n "T-Pot ISM policy not found on OpenSearch, putting it on OpenSearch now: "
+        curl -s -XPUT "${myOS}/_plugins/_ism/policies/tpot" -H 'Content-Type: application/json' --data-binary @/etc/logstash/tpot-ism-policy.json
         echo
       else
-        echo "T-Pot index template already configured or OpenSearch not available."
+        echo "T-Pot ISM policy already configured (HTTP $myTPOTISM)."
     fi
-    myTPOTISM=$(curl -s -o /dev/null -w "%{http_code}" "http://opensearch:9200/_plugins/_ism/policies/tpot")
-    if [ "$myTPOTISM" != "200" ];
-      then
-        echo "T-Pot ISM policy not found on OpenSearch, putting it on OpenSearch now."
-        curl -s -XPUT "http://opensearch:9200/_plugins/_ism/policies/tpot" -H 'Content-Type: application/json' -d'
-        {
-          "policy": {
-            "description": "T-Pot ISM policy with a retention of 30 days",
-            "default_state": "hot",
-            "states": [
-              {
-                "name": "hot",
-                "actions": [],
-                "transitions": [
-                  {
-                    "state_name": "delete",
-                    "conditions": {
-                      "min_index_age": "30d"
-                    }
-                  }
-                ]
-              },
-              {
-                "name": "delete",
-                "actions": [
-                  {
-                    "delete": {}
-                  }
-                ],
-                "transitions": []
-              }
-            ],
-            "ism_template": [
-              {
-                "index_patterns": ["logstash-*"],
-                "priority": 100
-              }
-            ]
-          }
-        }'
-        echo
-      else
-        echo "T-Pot ISM policy already configured or OpenSearch not available."
-    fi
+    # The policy's ism_template only applies to indices created after the policy, so
+    # attach it to existing logstash-* indices that are not managed yet (e.g. after a
+    # restore). Indices that are already managed are skipped by OpenSearch.
+    echo -n "Attaching T-Pot ISM policy to unmanaged logstash-* indices: "
+    curl -s -XPOST "${myOS}/_plugins/_ism/add/logstash-*" -H 'Content-Type: application/json' -d '{ "policy_id": "tpot" }' | grep -o '"updated_indices":[0-9]*' || echo "none"
 fi
 echo
 

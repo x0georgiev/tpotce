@@ -40,10 +40,17 @@ RUN apt-get update -y && \
     cp pipelines.yml /usr/share/logstash/config/pipelines.yml && \
     cp pipelines_sensor.yml /usr/share/logstash/config/pipelines_sensor.yml && \
     cp tpot-template.json /etc/logstash/ && \
+    cp tpot-ism-policy.json /etc/logstash/ && \
     cd /usr/share/logstash && \
     bin/logstash-plugin update logstash-filter-translate && \
 	bin/logstash-plugin install logstash-output-syslog && \
     bin/logstash-plugin install --version 2.1.1 logstash-output-opensearch && \
+# Remove the Elasticsearch plugins T-Pot does not use. logstash-output-elasticsearch
+# stays: Logstash's X-Pack (which keeps the GeoIP databases updated) loads it on start.
+    bin/logstash-plugin remove logstash-filter-elastic_integration \
+                               logstash-filter-elasticsearch \
+                               logstash-input-elastic_serverless_forwarder \
+                               logstash-input-elasticsearch && \
     rm /etc/logstash/pipelines.yml && \
     rm /etc/logstash/logstash.yml && \
 #

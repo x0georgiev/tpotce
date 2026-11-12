@@ -64,6 +64,9 @@
         }
       ],
       "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
         "geoip.ip": {
           "type": "ip"
         },
