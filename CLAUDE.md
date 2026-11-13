@@ -42,4 +42,4 @@ Post-build container tests; they require the image to already exist locally and 
 
 - Commit messages use conventional prefixes (`feat:`, `fix:`, `refactor:`).
 - Shell scripts use the project's `myVAR` / `fuFUNCTION` naming style in many scripts (e.g. `update.sh`); match the style of the file being edited.
-- CI (`.github/workflows/`) only runs a README link checker and issue housekeeping — there is no automated build or test in CI, so run the relevant smoke test locally.
+- There is no CI (no `.github/workflows/`), so run the relevant smoke test locally.
