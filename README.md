@@ -956,7 +956,6 @@ The software that T-Pot is built on uses the following licenses.
 [citrixhoneypot](https://github.com/MalwareTech/CitrixHoneypot#licencing-agreement-malwaretech-public-licence),
 [cowrie](https://github.com/cowrie/cowrie/blob/main/LICENSE.rst),
 [mailoney](https://github.com/phin3has/mailoney),
-[Elastic License](https://www.elastic.co/licensing/elastic-license),
 [Wordpot](https://github.com/gbrindisi/wordpot)
 <br>AGPL-3.0:
 [honeypots](https://github.com/qeeqbox/honeypots/blob/main/LICENSE)

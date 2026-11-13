@@ -26,8 +26,8 @@ RUN apt-get update -y && \
     wget -q --user-agent=listbot https://listbot.sicherheitstacho.eu/iprep.yaml.bz2 && \
     bunzip2 *.bz2 && \
     cd /root/dist/ && \
-    wget -q https://artifacts.elastic.co/downloads/logstash/logstash-$LS_VER-$LS_ARCH.deb && \
-    dpkg -i logstash-$LS_VER-$LS_ARCH.deb && \
+    wget -q https://artifacts.elastic.co/downloads/logstash/logstash-oss-$LS_VER-$LS_ARCH.deb && \
+    dpkg -i logstash-oss-$LS_VER-$LS_ARCH.deb && \
 #
 # Add and move files
     cd /root/dist/ && \
@@ -45,12 +45,13 @@ RUN apt-get update -y && \
     bin/logstash-plugin update logstash-filter-translate && \
 	bin/logstash-plugin install logstash-output-syslog && \
     bin/logstash-plugin install --version 2.1.1 logstash-output-opensearch && \
-# Remove the Elasticsearch plugins T-Pot does not use. logstash-output-elasticsearch
-# stays: Logstash's X-Pack (which keeps the GeoIP databases updated) loads it on start.
-    bin/logstash-plugin remove logstash-filter-elastic_integration \
-                               logstash-filter-elasticsearch \
+# Remove the Elasticsearch plugins T-Pot does not use. The OSS distribution has no
+# X-Pack, so nothing needs logstash-output-elasticsearch. GeoIP lookups use the
+# GeoLite2 databases bundled with logstash-filter-geoip.
+    bin/logstash-plugin remove logstash-filter-elasticsearch \
                                logstash-input-elastic_serverless_forwarder \
-                               logstash-input-elasticsearch && \
+                               logstash-input-elasticsearch \
+                               logstash-output-elasticsearch && \
     rm /etc/logstash/pipelines.yml && \
     rm /etc/logstash/logstash.yml && \
 #
