@@ -13,6 +13,7 @@ RUN apt-get update -y && \
              bash \
              bzip2 \
              curl \
+             geoipupdate \
              wget && \
 #
 # Determine arch, get and install packages
@@ -37,6 +38,7 @@ RUN apt-get update -y && \
     cp logstash.conf /etc/logstash/ && \
     cp http_input.conf /etc/logstash/ && \
     cp http_output.conf /etc/logstash/ && \
+    cp tpot_geoip.conf /etc/logstash/ && \
     cp pipelines.yml /usr/share/logstash/config/pipelines.yml && \
     cp pipelines_sensor.yml /usr/share/logstash/config/pipelines_sensor.yml && \
     cp tpot-template.json /etc/logstash/ && \
@@ -46,12 +48,14 @@ RUN apt-get update -y && \
 	bin/logstash-plugin install logstash-output-syslog && \
     bin/logstash-plugin install --version 2.1.1 logstash-output-opensearch && \
 # Remove the Elasticsearch plugins T-Pot does not use. The OSS distribution has no
-# X-Pack, so nothing needs logstash-output-elasticsearch. GeoIP lookups use the
-# GeoLite2 databases bundled with logstash-filter-geoip.
+# X-Pack, so nothing needs logstash-output-elasticsearch.
     bin/logstash-plugin remove logstash-filter-elasticsearch \
                                logstash-input-elastic_serverless_forwarder \
                                logstash-input-elasticsearch \
                                logstash-output-elasticsearch && \
+# Remove the GeoLite2 databases bundled with logstash-filter-geoip, so the image ships
+# no (outdated) MaxMind data. The HIVE downloads current databases with geoipupdate.
+    rm -f vendor/bundle/jruby/*/gems/logstash-filter-geoip-*/vendor/*.mmdb && \
     rm /etc/logstash/pipelines.yml && \
     rm /etc/logstash/logstash.yml && \
 #
@@ -63,6 +67,8 @@ RUN apt-get update -y && \
         /var/lib/logstash \
         /usr/share/logstash/data \
         /usr/share/logstash/config/pipelines* && \
+# The entrypoint rewrites tpot_geoip.conf (atomically, so it needs the folder as well)
+    chown logstash:logstash /etc/logstash /etc/logstash/tpot_geoip.conf && \
     chmod 755 /usr/bin/entrypoint.sh && \
 #
 # Clean up

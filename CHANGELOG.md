@@ -4,7 +4,8 @@ T-Pot is built on **OpenSearch** and **OpenSearch Dashboards**.
 
 ## Updates
 * **OpenSearch 3.9.0** (`opensearch`) stores all events, **OpenSearch Dashboards 3.9.0** (`opensearch-dashboards`) visualizes them at `https://<host>:64297/dashboards/`. Security plugins and several unused heavy plugins (ML, k-NN, neural search, security analytics, anomaly detection, performance analyzer, ...) are removed from the images.
-* **Logstash** is the Apache-2.0 licensed OSS distribution (`logstash-oss`, no X-Pack) and ships events using the `logstash-output-opensearch` plugin; all bundled Elasticsearch plugins are removed. GeoIP lookups use the GeoLite2 databases bundled with `logstash-filter-geoip`, which are refreshed by rebuilding the image.
+* **Logstash** is the Apache-2.0 licensed OSS distribution (`logstash-oss`, no X-Pack) and ships events using the `logstash-output-opensearch` plugin; all bundled Elasticsearch plugins are removed.
+* **GeoIP** enrichment moved to the Hive / Standard installation: sensors no longer enrich events, the Hive adds `geoip` / `geoip_ext` to local and sensor events. The image ships no GeoIP data anymore; Logstash downloads the MaxMind databases with `geoipupdate` (set `MAXMIND_ACCOUNT_ID` / `MAXMIND_LICENSE_KEY` in `.env`), checks for updates every 24h and restarts when they change. Without an account GeoIP enrichment is disabled; `update.sh` adds the new settings to existing `.env` files.
 * **Retention** is handled by the OpenSearch ISM policy `tpot` (30 days).
 * **Dashboards** are classic OpenSearch Dashboards visualizations (`docker/tpotinit/dist/etc/objects/osd_export.ndjson`), imported by `tpotinit`, which also keeps the index pattern's field list current.
 * **Attack Map** data server talks to OpenSearch through a small client shim.
