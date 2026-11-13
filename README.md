@@ -61,6 +61,7 @@ env bash -c "$(curl -sL https://github.com/telekom-security/tpotce/raw/master/in
   - [Spiderfoot](#spiderfoot)
 - [Configuration](#configuration)
   - [T-Pot Config File](#t-pot-config-file)
+  - [GeoIP Databases](#geoip-databases)
   - [Customize T-Pot Honeypots and Services](#customize-t-pot-honeypots-and-services)
 - [Maintenance](#maintenance)
   - [General Updates](#general-updates)
@@ -606,6 +607,15 @@ On the T-Pot Landing Page just click on `Spiderfoot` and you will be forwarded t
 ## T-Pot Config File
 T-Pot offers a configuration file providing variables not only for the docker services (i.e. honeypots and tools) but also for the docker compose environment. The configuration file is hidden in `~/tpoce/.env`. There is also an example file (`env.example`) which holds the default configuration.<br>
 Before the first start run `~/tpotce/genuser.sh` or setup the `WEB_USER` manually as described [here](#add-users-to-nginx-t-pot-webui). 
+
+## GeoIP Databases
+T-Pot ships no GeoIP data. The Logstash container of a T-Pot Standard / Hive installation downloads the MaxMind databases with `geoipupdate` on every start and checks for updates every 24 hours. The databases are stored in `~/tpotce/data/logstash/geoip`; when they change, Logstash restarts to use them (events are delayed, not lost). Sensors do not enrich events, the Hive adds `geoip` (attacker) and `geoip_ext` (sensor) for all events, including those received from sensors.<br>
+To enable GeoIP enrichment:
+1. Create a free [GeoLite account](https://www.maxmind.com/en/geolite2/signup) and generate a license key. Review the MaxMind license terms for your use case.
+2. Set `MAXMIND_ACCOUNT_ID` and `MAXMIND_LICENSE_KEY` in `~/tpotce/.env` (the Hive's `.env` in a distributed setup).
+3. Restart T-Pot: `systemctl restart tpot`.
+
+`MAXMIND_CITY_EDITION` and `MAXMIND_ASN_EDITION` select the database editions (default `GeoLite2-City` / `GeoLite2-ASN`); commercial GeoIP2 editions with the same format can be used instead. Without an account, events get no `geoip` / `geoip_ext` fields, so the Attack Map and the Dashboards' maps stay empty. `docker logs logstash` shows whether GeoIP enrichment is active, the age of the databases and a warning when they are older than 14 days.
 
 ## Customize T-Pot Honeypots and Services
 

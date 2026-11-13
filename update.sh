@@ -946,6 +946,23 @@ function fuRESTORE () {
 	    sed -i "s|^TPOT_REPO=.*|TPOT_REPO=${myNEWREPO}|" "$HOME/tpotce/.env"
 	    echo "###### $myBLUE""TPOT_REPO dtagdevsec -> ${myNEWREPO}, which avoids the Docker Hub rate limits.""$myWHITE"
 	fi
+	# GeoIP databases are no longer bundled, the HIVE downloads them with a MaxMind account.
+	# Older .env files lack the settings, so add them (empty) from env.example and say so.
+	if ! grep -qE "^MAXMIND_ACCOUNT_ID=" "$HOME/tpotce/.env";
+	  then
+	    myGEOIPBLOCK=$(sed -n '/^# GeoIP databases/,/^MAXMIND_ASN_EDITION=/p' env.example 2>/dev/null)
+	    if [ -n "${myGEOIPBLOCK}" ];
+	      then
+	        printf '\n%s\n' "${myGEOIPBLOCK}" >> "$HOME/tpotce/.env"
+	        echo "###### $myBLUE""Added the MAXMIND_* GeoIP settings to .env.""$myWHITE"
+	    fi
+	fi
+	myMAXMINDID=$(grep -E "^MAXMIND_ACCOUNT_ID=" "$HOME/tpotce/.env" | tail -1 | cut -d= -f2-)
+	myTPOTTYPE=$(grep -E "^TPOT_TYPE=" "$HOME/tpotce/.env" | tail -1 | cut -d= -f2-)
+	if [ -z "${myMAXMINDID}" ] && [ "${myTPOTTYPE}" != "SENSOR" ];
+	  then
+	    echo "###### $myBLUE""GeoIP enrichment stays DISABLED until MAXMIND_ACCOUNT_ID and MAXMIND_LICENSE_KEY are set in .env.""$myWHITE"" [ $myRED""NOTE""$myWHITE ]"
+	fi
 }
 
 # The docker-compose.yml as it was before the update, taken from the archive. It is
